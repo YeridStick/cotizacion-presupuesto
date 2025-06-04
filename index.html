@@ -1,0 +1,3936 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema PIC con localStorage</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #4caf50, #45a049);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 2.2em;
+        font-weight: 300;
+      }
+
+      .storage-status {
+        background: #e8f5e8;
+        border: 1px solid #4caf50;
+        padding: 15px;
+        margin: 20px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .storage-status.error {
+        background: #ffebee;
+        border-color: #f44336;
+        color: #c62828;
+      }
+
+      .storage-status.success {
+        background: #e8f5e8;
+        border-color: #4caf50;
+        color: #2e7d32;
+      }
+
+      .tabs {
+        display: flex;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        background: #f8f9fa;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .tab.active {
+        background: white;
+        color: #4caf50;
+        border-bottom: 3px solid #4caf50;
+      }
+
+      .tab:hover {
+        background: #e9ecef;
+      }
+
+      .tab-content {
+        display: none;
+        padding: 30px;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .form-section {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+      }
+
+      .form-section h3 {
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 1.3em;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #4caf50;
+      }
+
+      .btn {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        margin: 5px;
+      }
+
+      .btn:hover {
+        background: #45a049;
+        transform: translateY(-2px);
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+      }
+
+      .btn-danger {
+        background: #dc3545;
+      }
+
+      .btn-danger:hover {
+        background: #c82333;
+      }
+
+      .btn-warning {
+        background: #ffc107;
+        color: #212529;
+      }
+
+      .btn-warning:hover {
+        background: #e0a800;
+      }
+
+      .btn-small {
+        padding: 5px 10px;
+        font-size: 12px;
+        margin: 2px;
+      }
+
+      .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .summary-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        text-align: center;
+        border-left: 5px solid #4caf50;
+      }
+
+      .summary-card h4 {
+        margin: 0 0 10px 0;
+        color: #666;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .summary-card .value {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #4caf50;
+      }
+
+      .table-container {
+        overflow-x: auto;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+
+      th {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 15px 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      td {
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9em;
+      }
+
+      tr:hover {
+        background: #f8f9fa;
+      }
+
+      .price-new {
+        color: #28a745;
+        font-weight: bold;
+      }
+
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 1001;
+        transform: translateX(400px);
+        transition: transform 0.3s ease;
+      }
+
+      .notification.success {
+        background: #28a745;
+      }
+
+      .notification.error {
+        background: #dc3545;
+      }
+
+      .notification.show {
+        transform: translateX(0);
+      }
+
+      .backup-section {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+
+      .backup-section h4 {
+        color: #856404;
+        margin-bottom: 15px;
+      }
+
+      .search-filter {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .search-filter input,
+      .search-filter select {
+        padding: 8px 12px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      input[type="color"] {
+        width: 50px;
+        height: 35px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+
+      input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 5px;
+      }
+
+      @media (max-width: 768px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .search-filter {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .tabs {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Sistema de Gestión de Presupuesto PIC</h1>
+        <p>ESE Hospital Municipal de Algeciras Huila</p>
+        <p>Con almacenamiento persistente (localStorage)</p>
+      </div>
+
+      <div id="storageStatus" class="storage-status"></div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('productos')">
+          📝 Gestión de Productos
+        </button>
+        <button class="tab" onclick="showTab('formulas')">
+          📐 Fórmulas y Cálculos
+        </button>
+        <button class="tab" onclick="showTab('ajustes')">
+          ⚙️ Ajustes de Presupuesto
+        </button>
+        <button class="tab" onclick="showTab('personalizacion')">
+          🎨 Personalización Excel
+        </button>
+        <button class="tab" onclick="showTab('backup')">
+          💾 Respaldo y Restauración
+        </button>
+      </div>
+
+      <!-- TAB 1: GESTIÓN DE PRODUCTOS -->
+      <div id="productos" class="tab-content active">
+        <div class="form-section">
+          <h3>➕ Agregar/Editar Producto</h3>
+          <form id="productoForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="producto">Producto</label>
+                <input type="text" id="producto" required />
+              </div>
+              <div class="form-group">
+                <label for="cantidad">Cantidad</label>
+                <input type="number" id="cantidad" value="1" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="presentacion">Presentación</label>
+                <input type="text" id="presentacion" required />
+              </div>
+              <div class="form-group">
+                <label for="categoria">Categoría</label>
+                <select id="categoria" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="papeleria">Papelería</option>
+                  <option value="alimentos">Alimentos</option>
+                  <option value="semillas">Semillas</option>
+                  <option value="aseo">Aseo y Limpieza</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="valorCosto">Valor Costo ($)</label>
+                <input
+                  type="number"
+                  id="valorCosto"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="margenDeseado">Margen Deseado (%)</label>
+                <input
+                  type="number"
+                  id="margenDeseado"
+                  min="0"
+                  step="0.1"
+                  value="25"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="valorTotal">Valor Total (Calculado)</label>
+              <input
+                type="number"
+                id="valorTotal"
+                readonly
+                style="background: #f8f9fa"
+              />
+            </div>
+            <div style="margin-top: 20px">
+              <button type="submit" class="btn">💾 Guardar Producto</button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="limpiarFormulario()"
+              >
+                🔄 Limpiar
+              </button>
+              <button
+                type="button"
+                class="btn btn-warning"
+                onclick="cargarDatosPrueba()"
+              >
+                📋 Cargar Datos de Prueba
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="search-filter">
+          <input
+            type="text"
+            id="buscarProducto"
+            placeholder="🔍 Buscar producto..."
+            onkeyup="filtrarTabla()"
+          />
+          <select id="filtroCategoria" onchange="filtrarTabla()">
+            <option value="">Todas las categorías</option>
+            <option value="papeleria">Papelería</option>
+            <option value="alimentos">Alimentos</option>
+            <option value="semillas">Semillas</option>
+            <option value="aseo">Aseo y Limpieza</option>
+            <option value="otros">Otros</option>
+          </select>
+          <button class="btn btn-danger" onclick="limpiarTodosLosProductos()">
+            🗑️ Limpiar Todo
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th>Presentación</th>
+                <th>Categoría</th>
+                <th>Valor Costo</th>
+                <th>Margen %</th>
+                <th>Valor Total</th>
+                <th>Subtotal</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaProductos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: FÓRMULAS Y CÁLCULOS -->
+      <div id="formulas" class="tab-content">
+        <h3>📐 Fórmulas Utilizadas en el Sistema</h3>
+
+        <div
+          class="form-section"
+          style="background: #e8f5e8; border: 1px solid #4caf50"
+        >
+          <h4 style="color: #2e7d32; margin-bottom: 15px">
+            1. Cálculo de Valor Total
+          </h4>
+          <div
+            style="
+              font-family: 'Courier New', monospace;
+              background: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            "
+          >
+            <strong>Fórmula:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Valor Total = Valor Costo × (1 + Margen/100)</code
+            >
+          </div>
+          <p>
+            <strong>Ejemplo:</strong> Si Valor Costo = $1,000 y Margen = 25%
+          </p>
+          <p
+            style="
+              font-family: monospace;
+              background: #f8f9fa;
+              padding: 10px;
+              border-radius: 5px;
+            "
+          >
+            Valor Total = $1,000 × (1 + 25/100) = $1,000 × 1.25 = $1,250
+          </p>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #e3f2fd; border: 1px solid #2196f3"
+        >
+          <h4 style="color: #1976d2; margin-bottom: 15px">
+            2. Cálculo de Margen de Ganancia
+          </h4>
+          <div
+            style="
+              font-family: 'Courier New', monospace;
+              background: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            "
+          >
+            <strong>Fórmula:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Margen % = ((Valor Total - Valor Costo) / Valor Costo) ×
+              100</code
+            >
+          </div>
+          <p>
+            <strong>Ejemplo:</strong> Si Valor Total = $1,250 y Valor Costo =
+            $1,000
+          </p>
+          <p
+            style="
+              font-family: monospace;
+              background: #f8f9fa;
+              padding: 10px;
+              border-radius: 5px;
+            "
+          >
+            Margen % = (($1,250 - $1,000) / $1,000) × 100 = 25%
+          </p>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #fff3e0; border: 1px solid #ff9800"
+        >
+          <h4 style="color: #f57c00; margin-bottom: 15px">
+            3. Ajuste Proporcional de Presupuesto
+          </h4>
+          <div
+            style="
+              font-family: 'Courier New', monospace;
+              background: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            "
+          >
+            <strong>Factor de Ajuste:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Factor = Presupuesto Objetivo / Presupuesto Actual</code
+            ><br />
+            <strong>Nuevo Valor:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Nuevo Valor Total = Valor Total Actual × Factor</code
+            >
+          </div>
+          <p>
+            <strong>Ejemplo:</strong> Para reducir de $4,000,000 a $3,000,000
+          </p>
+          <p
+            style="
+              font-family: monospace;
+              background: #f8f9fa;
+              padding: 10px;
+              border-radius: 5px;
+            "
+          >
+            Factor = $3,000,000 / $4,000,000 = 0.75<br />
+            Todos los precios se multiplican por 0.75
+          </p>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #f3e5f5; border: 1px solid #9c27b0"
+        >
+          <h4 style="color: #7b1fa2; margin-bottom: 15px">
+            4. Cálculo de Nuevo Margen tras Ajuste
+          </h4>
+          <div
+            style="
+              font-family: 'Courier New', monospace;
+              background: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            "
+          >
+            <strong>Fórmula:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Nuevo Margen % = ((Nuevo Valor Total - Valor Costo) / Valor
+              Costo) × 100</code
+            >
+          </div>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #e8f5e8; border: 1px solid #4caf50"
+        >
+          <h4 style="color: #388e3c; margin-bottom: 15px">
+            5. Total del Presupuesto
+          </h4>
+          <div
+            style="
+              font-family: 'Courier New', monospace;
+              background: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 10px 0;
+            "
+          >
+            <strong>Fórmula:</strong>
+            <code
+              style="
+                background: #f8f9fa;
+                padding: 3px 8px;
+                border-radius: 3px;
+                color: #c7254e;
+              "
+              >Total Presupuesto = Σ(Valor Total × Cantidad) para cada
+              producto</code
+            >
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 style="margin-top: 30px">🧮 Calculadora Interactiva</h3>
+          <p style="margin-bottom: 20px; color: #666">
+            Usa esta calculadora para probar las fórmulas antes de aplicarlas a
+            tus productos:
+          </p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="calcCosto">Valor Costo ($)</label>
+              <input
+                type="number"
+                id="calcCosto"
+                min="0"
+                step="0.01"
+                placeholder="Ej: 1000"
+                onchange="calcularFormula()"
+              />
+            </div>
+            <div class="form-group">
+              <label for="calcMargen">Margen Deseado (%)</label>
+              <input
+                type="number"
+                id="calcMargen"
+                min="0"
+                step="0.1"
+                placeholder="Ej: 25"
+                onchange="calcularFormula()"
+              />
+            </div>
+            <div class="form-group">
+              <label for="calcTotal">Valor Total (Resultado)</label>
+              <input
+                type="text"
+                id="calcTotal"
+                readonly
+                style="background: #e8f5e8; font-weight: bold; font-size: 16px"
+              />
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top: 20px">
+            <div class="form-group">
+              <label for="calcPresupuestoActual">Presupuesto Actual ($)</label>
+              <input
+                type="number"
+                id="calcPresupuestoActual"
+                min="0"
+                step="1000"
+                placeholder="Ej: 4000000"
+                onchange="calcularAjuste()"
+              />
+            </div>
+            <div class="form-group">
+              <label for="calcPresupuestoObjetivo"
+                >Presupuesto Objetivo ($)</label
+              >
+              <input
+                type="number"
+                id="calcPresupuestoObjetivo"
+                min="0"
+                step="1000"
+                placeholder="Ej: 3000000"
+                onchange="calcularAjuste()"
+              />
+            </div>
+            <div class="form-group">
+              <label for="calcFactor">Factor de Ajuste (Resultado)</label>
+              <input
+                type="text"
+                id="calcFactor"
+                readonly
+                style="background: #fff3e0; font-weight: bold; font-size: 16px"
+              />
+            </div>
+          </div>
+
+          <div
+            style="
+              background: #e3f2fd;
+              padding: 15px;
+              border-radius: 8px;
+              margin-top: 20px;
+            "
+          >
+            <h4 style="color: #1976d2; margin-bottom: 10px">
+              💡 Ejemplos Prácticos:
+            </h4>
+            <ul style="margin-left: 20px; color: #333">
+              <li>
+                <strong>Para mantener margen del 25%:</strong> Si costo = $800,
+                entonces precio = $800 × 1.25 = $1,000
+              </li>
+              <li>
+                <strong>Para reducir presupuesto en 25%:</strong> Factor = 0.75,
+                todos los precios se multiplican por 0.75
+              </li>
+              <li>
+                <strong>Para calcular margen actual:</strong> Si precio = $1,200
+                y costo = $800, margen = (400/800) × 100 = 50%
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: AJUSTES -->
+      <div id="ajustes" class="tab-content">
+        <div class="summary-cards">
+          <div class="summary-card">
+            <h4>Total Items</h4>
+            <div class="value" id="totalItems">0</div>
+          </div>
+          <div class="summary-card">
+            <h4>Presupuesto Actual</h4>
+            <div class="value" id="presupuestoActual">$0</div>
+          </div>
+          <div class="summary-card">
+            <h4>Margen Promedio</h4>
+            <div class="value" id="margenPromedio">0%</div>
+          </div>
+          <div class="summary-card">
+            <h4>Costo Total</h4>
+            <div class="value" id="costoTotal">$0</div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>🎯 Ajustar Presupuesto</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="presupuestoObjetivo">Presupuesto Objetivo ($)</label>
+              <input
+                type="number"
+                id="presupuestoObjetivo"
+                value="3000000"
+                min="0"
+                step="1000"
+              />
+            </div>
+            <div class="form-group">
+              <label for="metodoAjuste">Método de Ajuste</label>
+              <select id="metodoAjuste">
+                <option value="proporcional">Reducción Proporcional</option>
+                <option value="margen_fijo">Margen Fijo Para Todos</option>
+                <option value="por_categoria">Por Categoría</option>
+              </select>
+            </div>
+            <div class="form-group" id="margenFijoGroup" style="display: none">
+              <label for="margenFijo">Nuevo Margen Fijo (%)</label>
+              <input
+                type="number"
+                id="margenFijo"
+                min="0"
+                step="0.1"
+                value="18.6"
+              />
+            </div>
+          </div>
+          <button class="btn" onclick="aplicarAjuste()">
+            🔧 Aplicar Ajuste
+          </button>
+          <button class="btn btn-secondary" onclick="restaurarOriginales()">
+            ↩️ Restaurar Originales
+          </button>
+          <button class="btn btn-warning" onclick="generarExcelCompleto()">
+            📊 Generar Excel
+          </button>
+        </div>
+
+        <div id="ajustePorCategoria" style="display: none">
+          <h4>Márgenes por Categoría</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Papelería (%)</label>
+              <input
+                type="number"
+                id="margenPapeleria"
+                value="20"
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <div class="form-group">
+              <label>Alimentos (%)</label>
+              <input
+                type="number"
+                id="margenAlimentos"
+                value="15"
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <div class="form-group">
+              <label>Semillas (%)</label>
+              <input
+                type="number"
+                id="margenSemillas"
+                value="25"
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <div class="form-group">
+              <label>Aseo (%)</label>
+              <input
+                type="number"
+                id="margenAseo"
+                value="18"
+                min="0"
+                step="0.1"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: PERSONALIZACIÓN EXCEL -->
+      <div id="personalizacion" class="tab-content">
+        <div class="form-section">
+          <h3>🎨 Personalización de Archivo Excel</h3>
+          <p style="color: #666; margin-bottom: 20px">
+            Configura cómo se generará tu archivo Excel con encabezados
+            personalizados y formato profesional.
+          </p>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #e8f5e8; border: 1px solid #4caf50"
+        >
+          <h4 style="color: #2e7d32">📄 Configuración del Archivo</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="nombreArchivo">Nombre del Archivo</label>
+              <input
+                type="text"
+                id="nombreArchivo"
+                value="PRESUPUESTO_PIC_ALGECIRAS"
+                placeholder="Nombre sin extensión"
+              />
+            </div>
+            <div class="form-group">
+              <label for="fechaGeneracion">Incluir Fecha en Nombre</label>
+              <select id="fechaGeneracion">
+                <option value="si">Sí (Ej: PRESUPUESTO_2025-01-15)</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #e3f2fd; border: 1px solid #2196f3"
+        >
+          <h4 style="color: #1976d2">🏢 Información de la Entidad</h4>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: auto 1fr;
+              gap: 15px;
+              align-items: center;
+            "
+          >
+            <label style="display: flex; align-items: center">
+              <input
+                type="checkbox"
+                id="incluirObjeto"
+                checked
+                style="margin-right: 8px"
+              />
+              Incluir Objeto del Contrato
+            </label>
+            <textarea
+              id="objetoContrato"
+              rows="3"
+              style="
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 5px;
+                resize: vertical;
+              "
+            >
+SUMINISTRO DE MATERIAL DE PAPELERIA, INSUMOS LOGISTICOS Y OTROS PARA LA EJECUCION DE LAS ACTIVIDADES DEL PLAN DE INTERVENCIONES COLECTIVAS (PIC) MUNICIPAL A CARGO DE LA ESE HOSPITAL MUNICIPAL DE ALGECIRAS HUILA</textarea
+            >
+
+            <label style="display: flex; align-items: center">
+              <input
+                type="checkbox"
+                id="incluirEntidad"
+                checked
+                style="margin-right: 8px"
+              />
+              Incluir Nombre de la Entidad
+            </label>
+            <input
+              type="text"
+              id="nombreEntidad"
+              value="ESE HOSPITAL MUNICIPAL DE ALGECIRAS HUILA"
+              style="padding: 10px; border: 2px solid #ddd; border-radius: 5px"
+            />
+
+            <label style="display: flex; align-items: center">
+              <input
+                type="checkbox"
+                id="incluirCategoria"
+                checked
+                style="margin-right: 8px"
+              />
+              Incluir Categoría de Material
+            </label>
+            <input
+              type="text"
+              id="categoriaGeneral"
+              value="MATERIAL DE PAPELERIA Y OTROS"
+              style="padding: 10px; border: 2px solid #ddd; border-radius: 5px"
+            />
+
+            <label style="display: flex; align-items: center">
+              <input
+                type="checkbox"
+                id="incluirFecha"
+                checked
+                style="margin-right: 8px"
+              />
+              Incluir Fecha de Generación
+            </label>
+            <input
+              type="date"
+              id="fechaDocumento"
+              style="padding: 10px; border: 2px solid #ddd; border-radius: 5px"
+            />
+
+            <label style="display: flex; align-items: center">
+              <input
+                type="checkbox"
+                id="incluirResponsable"
+                style="margin-right: 8px"
+              />
+              Incluir Responsable
+            </label>
+            <input
+              type="text"
+              id="nombreResponsable"
+              placeholder="Nombre del responsable"
+              style="padding: 10px; border: 2px solid #ddd; border-radius: 5px"
+            />
+          </div>
+        </div>
+
+        <div
+          class="form-section"
+          style="background: #fff3e0; border: 1px solid #ff9800"
+        >
+          <h4 style="color: #f57c00">📊 Configuración de la Tabla</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="incluirFormulas"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Incluir Fórmulas en Excel (recomendado)
+              </label>
+              <small style="color: #666; display: block; margin-top: 5px">
+                Las celdas tendrán fórmulas para cálculos automáticos
+              </small>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="incluirTotales"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Incluir Fila de Totales
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="formatoMoneda"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Formato de Moneda Colombiana
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="filtrosAutomaticos"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Filtros Automáticos en Encabezados
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="ajustarColumnas"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Ajustar Ancho de Columnas Automáticamente
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="anchoMaximoColumna"
+                >Ancho Máximo de Columnas (caracteres)</label
+              >
+              <input
+                type="number"
+                id="anchoMaximoColumna"
+                value="50"
+                min="20"
+                max="100"
+                style="padding: 8px; border: 2px solid #ddd; border-radius: 5px"
+              />
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="ajustarAlturaFilas"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Ajustar Altura de Filas Automáticamente
+              </label>
+              <small style="color: #666; display: block; margin-top: 5px">
+                Las filas se expandirán si el texto es muy largo
+              </small>
+            </div>
+            <div class="form-group">
+              <label>
+                <input
+                  type="checkbox"
+                  id="centrarEncabezados"
+                  checked
+                  style="margin-right: 8px"
+                />
+                Centrar Texto de Encabezados Principales
+              </label>
+              <small style="color: #666; display: block; margin-top: 5px">
+                Centra el objeto, entidad y categoría en la tabla
+              </small>
+            </div>
+            <div class="form-group">
+              <label for="headerBgColor">Color de Fondo de Encabezado</label>
+              <input type="color" id="headerBgColor" value="#4CAF50" />
+            </div>
+            <div class="form-group">
+              <label for="headerTextColor">Color de Texto de Encabezado</label>
+              <input type="color" id="headerTextColor" value="#FFFFFF" />
+            </div>
+            <div class="form-group">
+              <label for="rowOddColor">Color de Fondo de Filas Impares</label>
+              <input type="color" id="rowOddColor" value="#F8F9FA" />
+            </div>
+            <div class="form-group">
+              <label for="rowEvenColor">Color de Fondo de Filas Pares</label>
+              <input type="color" id="rowEvenColor" value="#FFFFFF" />
+            </div>
+            <div class="form-group">
+              <label for="borderColor">Color de Borde</label>
+              <input type="color" id="borderColor" value="#DDDDDD" />
+            </div>
+            <div class="form-group">
+              <label for="borderStyle">Estilo de Borde</label>
+              <select id="borderStyle">
+                <option value="thin">Delgado</option>
+                <option value="medium">Mediano</option>
+                <option value="thick">Grueso</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="totalRowBgColor"
+                >Color de Fondo de Fila de Totales</label
+              >
+              <input type="color" id="totalRowBgColor" value="#E8F5E8" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>🎨 Vista Previa del Encabezado</h4>
+          <div
+            id="vistaPrevia"
+            style="
+              background: white;
+              border: 2px solid #ddd;
+              padding: 20px;
+              border-radius: 8px;
+              font-family: Arial, sans-serif;
+              text-align: center;
+            "
+          >
+            <!-- Vista previa se genera dinámicamente -->
+          </div>
+          <button
+            class="btn btn-secondary"
+            onclick="actualizarVistaPrevia()"
+            style="margin-top: 10px"
+          >
+            🔄 Actualizar Vista Previa
+          </button>
+        </div>
+
+        <div class="form-section">
+          <h4>📥 Generar Archivo Excel</h4>
+          <div
+            style="
+              display: flex;
+              gap: 15px;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <button
+              class="btn"
+              onclick="generarExcelConExcelJS()"
+              style="background: #9c27b0; font-size: 16px; padding: 15px 25px"
+            >
+              🎯 Generar Excel (ExcelJS)
+            </button>
+            <!-- Removed SheetJS buttons -->
+          </div>
+          <div
+            style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap"
+          >
+            <button
+              class="btn"
+              onclick="verificarLibrerias()"
+              style="background: #ff9800; font-size: 14px"
+            >
+              🔍 Verificar Librerías
+            </button>
+            <!-- Removed other SheetJS/CSV related buttons -->
+            <button class="btn btn-secondary" onclick="guardarConfiguracion()">
+              💾 Guardar Config
+            </button>
+          </div>
+          <p style="margin-top: 10px; color: #666; font-size: 14px">
+            🎯 Generando Excel con ExcelJS para mejor formato y estilos.
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 5: BACKUP -->
+      <div id="backup" class="tab-content">
+        <div class="backup-section">
+          <h4>💾 Gestión de Respaldos</h4>
+          <p>
+            Esta sección te permite respaldar y restaurar todos tus datos del
+            sistema.
+          </p>
+          <div style="margin-top: 15px">
+            <button class="btn" onclick="exportarRespaldoCompleto()">
+              📤 Exportar Respaldo Completo
+            </button>
+            <button
+              class="btn btn-secondary"
+              onclick="document.getElementById('fileInput').click()"
+            >
+              📥 Importar Respaldo
+            </button>
+            <input
+              type="file"
+              id="fileInput"
+              accept=".json"
+              style="display: none"
+              onchange="importarRespaldo(event)"
+            />
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>📊 Estadísticas de Almacenamiento</h3>
+          <div id="estadisticasStorage"></div>
+        </div>
+
+        <div class="form-section">
+          <h3>🔧 Herramientas de Mantenimiento</h3>
+          <button class="btn btn-warning" onclick="limpiarCacheCompleto()">
+            🧹 Limpiar Cache Completo
+          </button>
+          <button class="btn btn-danger" onclick="resetearSistema()">
+            ⚠️ Resetear Sistema Completo
+          </button>
+          <p style="margin-top: 10px; color: #666; font-size: 14px">
+            <strong>Advertencia:</strong> Resetear el sistema eliminará todos
+            los datos de forma permanente.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <!-- Modal para editar producto -->
+    <div
+      id="modalEditar"
+      class="modal"
+      style="
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+      "
+    >
+      <div
+        class="modal-content"
+        style="
+          background-color: white;
+          margin: 5% auto;
+          padding: 20px;
+          border-radius: 10px;
+          width: 90%;
+          max-width: 600px;
+          max-height: 80vh;
+          overflow-y: auto;
+        "
+      >
+        <span
+          class="close"
+          style="
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+          "
+          >&times;</span
+        >
+        <h3 style="margin-bottom: 20px">✏️ Editar Producto</h3>
+        <form id="formEditar">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Producto</label>
+              <input type="text" id="editProducto" required />
+            </div>
+            <div class="form-group">
+              <label>Cantidad</label>
+              <input type="number" id="editCantidad" min="1" required />
+            </div>
+            <div class="form-group">
+              <label>Presentación</label>
+              <input type="text" id="editPresentacion" required />
+            </div>
+            <div class="form-group">
+              <label>Categoría</label>
+              <select id="editCategoria" required>
+                <option value="papeleria">Papelería</option>
+                <option value="alimentos">Alimentos</option>
+                <option value="semillas">Semillas</option>
+                <option value="aseo">Aseo y Limpieza</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Valor Costo ($)</label>
+              <input
+                type="number"
+                id="editValorCosto"
+                min="0"
+                step="0.01"
+                required
+                onchange="calcularValorTotalEdicion()"
+              />
+            </div>
+            <div class="form-group">
+              <label>Margen (%)</label>
+              <input
+                type="number"
+                id="editMargen"
+                min="0"
+                step="0.1"
+                required
+                onchange="calcularValorTotalEdicion()"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Valor Total (Calculado)</label>
+            <input
+              type="number"
+              id="editValorTotal"
+              readonly
+              style="background: #f8f9fa; font-weight: bold"
+            />
+          </div>
+          <div style="margin-top: 20px">
+            <button type="submit" class="btn">💾 Guardar Cambios</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="cerrarModal()"
+            >
+              ❌ Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Configuración de localStorage
+      const STORAGE_KEYS = {
+        productos: "pic_productos",
+        originales: "pic_productos_originales",
+        contador: "pic_contador_items",
+        configuracion: "pic_configuracion",
+        configExcel: "pic_config_excel",
+      };
+
+      // Variables globales
+      let productos = [];
+      let productosOriginales = [];
+      let contadorItems = 1;
+      let productoEditando = null;
+
+      // Verificar disponibilidad de localStorage
+      function verificarLocalStorage() {
+        try {
+          const test = "test";
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      // Mostrar estado del almacenamiento
+      function mostrarEstadoStorage() {
+        const statusDiv = document.getElementById("storageStatus");
+
+        if (verificarLocalStorage()) {
+          statusDiv.innerHTML = `
+                    <strong>✅ localStorage Disponible</strong><br>
+                    Los datos se guardan automáticamente y persisten entre sesiones.
+                `;
+          statusDiv.className = "storage-status success";
+        } else {
+          statusDiv.innerHTML = `
+                    <strong>⚠️ localStorage No Disponible</strong><br>
+                    Los datos se almacenan en memoria y se perderán al recargar la página.
+                `;
+          statusDiv.className = "storage-status error";
+        }
+      }
+
+      // Guardar en localStorage
+      function guardarEnStorage() {
+        if (!verificarLocalStorage()) return;
+
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.productos,
+            JSON.stringify(productos)
+          );
+          localStorage.setItem(
+            STORAGE_KEYS.originales,
+            JSON.stringify(productosOriginales)
+          );
+          localStorage.setItem(STORAGE_KEYS.contador, contadorItems.toString());
+
+          const config = {
+            ultimaActualizacion: new Date().toISOString(),
+            version: "1.0",
+          };
+          localStorage.setItem(
+            STORAGE_KEYS.configuracion,
+            JSON.stringify(config)
+          );
+        } catch (e) {
+          mostrarNotificacion(
+            "Error al guardar en localStorage: " + e.message,
+            "error"
+          );
+        }
+      }
+
+      // Cargar desde localStorage
+      function cargarDesdeStorage() {
+        if (!verificarLocalStorage()) return;
+
+        try {
+          const productosGuardados = localStorage.getItem(
+            STORAGE_KEYS.productos
+          );
+          const originalesGuardados = localStorage.getItem(
+            STORAGE_KEYS.originales
+          );
+          const contadorGuardado = localStorage.getItem(STORAGE_KEYS.contador);
+
+          if (productosGuardados) {
+            productos = JSON.parse(productosGuardados);
+          }
+
+          if (originalesGuardados) {
+            productosOriginales = JSON.parse(originalesGuardados);
+          }
+
+          if (contadorGuardado) {
+            contadorItems = parseInt(contadorGuardado);
+          }
+
+          mostrarNotificacion("Datos cargados desde localStorage", "success");
+        } catch (e) {
+          mostrarNotificacion(
+            "Error al cargar desde localStorage: " + e.message,
+            "error"
+          );
+        }
+      }
+
+      // Inicialización
+      document.addEventListener("DOMContentLoaded", function () {
+        mostrarEstadoStorage();
+        cargarDesdeStorage();
+        cargarConfiguracionExcel();
+
+        // Establecer fecha actual
+        document.getElementById("fechaDocumento").value = new Date()
+          .toISOString()
+          .split("T")[0];
+
+        const elementosQueActualizanVista = [
+          "incluirObjeto",
+          "objetoContrato",
+          "incluirEntidad",
+          "nombreEntidad",
+          "incluirCategoria",
+          "categoriaGeneral",
+          "incluirFecha",
+          "fechaDocumento",
+          "incluirResponsable",
+          "nombreResponsable",
+          "centrarEncabezados",
+          "headerBgColor",
+          "headerTextColor",
+          "rowOddColor",
+          "rowEvenColor",
+          "borderColor",
+          "totalRowBgColor",
+          "borderStyle",
+          "incluirTotales",
+        ];
+
+        // Event listeners
+        document
+          .getElementById("productoForm")
+          .addEventListener("submit", guardarProducto);
+        document
+          .getElementById("formEditar")
+          .addEventListener("submit", guardarEdicion);
+        document
+          .getElementById("valorCosto")
+          .addEventListener("input", calcularValorTotal);
+        document
+          .getElementById("margenDeseado")
+          .addEventListener("input", calcularValorTotal);
+        document
+          .getElementById("metodoAjuste")
+          .addEventListener("change", mostrarOpcionesAjuste);
+
+        elementosQueActualizanVista.forEach((id) => {
+          const elemento = document.getElementById(id);
+          if (elemento) {
+            elemento.addEventListener("change", actualizarVistaPrevia);
+            elemento.addEventListener("input", actualizarVistaPrevia);
+          }
+        });
+
+        // Modal event listeners
+        document.querySelector(".close").addEventListener("click", cerrarModal);
+        window.addEventListener("click", function (event) {
+          const modal = document.getElementById("modalEditar");
+          if (event.target === modal) {
+            cerrarModal();
+          }
+        });
+
+        actualizarResumen();
+        actualizarTabla();
+        actualizarEstadisticasStorage();
+        actualizarVistaPrevia();
+      });
+
+      // Funciones de gestión de tabs
+      function showTab(tabName) {
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.remove("active");
+        });
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+
+        document.getElementById(tabName).classList.add("active");
+        event.target.classList.add("active");
+
+        // Actualizar vista previa si se abre la pestaña de personalización
+        if (tabName === "personalizacion") {
+          setTimeout(actualizarVistaPrevia, 100);
+        }
+      }
+
+      // Cálculo automático del valor total
+      function calcularValorTotal() {
+        const costo =
+          parseFloat(document.getElementById("valorCosto").value) || 0;
+        const margen =
+          parseFloat(document.getElementById("margenDeseado").value) || 0;
+        const total = costo * (1 + margen / 100);
+        document.getElementById("valorTotal").value = total.toFixed(2);
+      }
+
+      // Guardar producto
+      function guardarProducto(e) {
+        e.preventDefault();
+
+        const producto = {
+          id: Date.now(),
+          item: contadorItems++,
+          producto: document.getElementById("producto").value,
+          cantidad: parseInt(document.getElementById("cantidad").value),
+          presentacion: document.getElementById("presentacion").value,
+          categoria: document.getElementById("categoria").value,
+          valorCosto: parseFloat(document.getElementById("valorCosto").value),
+          margen: parseFloat(document.getElementById("margenDeseado").value),
+          valorTotal: parseFloat(document.getElementById("valorTotal").value),
+        };
+
+        productos.push(producto);
+        productosOriginales.push({ ...producto });
+
+        guardarEnStorage();
+        mostrarNotificacion(
+          "Producto agregado y guardado correctamente",
+          "success"
+        );
+        limpiarFormulario();
+        actualizarTabla();
+        actualizarResumen();
+        actualizarEstadisticasStorage();
+      }
+
+      // Cargar datos de prueba
+      function cargarDatosPrueba() {
+        const datosPrueba = [
+          {
+            producto: "BANDAS ELASTICAS SILICONADAS DE CAUCHO",
+            cantidad: 1,
+            presentacion: "BOLSA MEDIANA",
+            categoria: "papeleria",
+            valorCosto: 800,
+            margen: 125,
+          },
+          {
+            producto: "BISTURI ENCAUCHETADO 3 HOJAS",
+            cantidad: 1,
+            presentacion: "UNIDAD",
+            categoria: "papeleria",
+            valorCosto: 5450,
+            margen: 137.2,
+          },
+          {
+            producto: "CD R TORRE X 100 UNIDADES",
+            cantidad: 1,
+            presentacion: "TORRE",
+            categoria: "papeleria",
+            valorCosto: 100000,
+            margen: 60,
+          },
+          {
+            producto: "GALLETAS DUX",
+            cantidad: 1,
+            presentacion: "PAQUETE",
+            categoria: "alimentos",
+            valorCosto: 9000,
+            margen: 60,
+          },
+          {
+            producto: "SEMILLAS DE CILANTRO",
+            cantidad: 1,
+            presentacion: "SOBRE",
+            categoria: "semillas",
+            valorCosto: 3400,
+            margen: 60,
+          },
+        ];
+
+        productos = [];
+        productosOriginales = [];
+        contadorItems = 1;
+
+        datosPrueba.forEach((item) => {
+          const producto = {
+            id: Date.now() + Math.random(),
+            item: contadorItems++,
+            producto: item.producto,
+            cantidad: item.cantidad,
+            presentacion: item.presentacion,
+            categoria: item.categoria,
+            valorCosto: item.valorCosto,
+            margen: item.margen,
+            valorTotal: item.valorCosto * (1 + item.margen / 100),
+          };
+
+          productos.push(producto);
+          productosOriginales.push({ ...producto });
+        });
+
+        guardarEnStorage();
+        mostrarNotificacion("Datos de prueba cargados y guardados", "success");
+        actualizarTabla();
+        actualizarResumen();
+        actualizarEstadisticasStorage();
+      }
+
+      // Limpiar formulario
+      function limpiarFormulario() {
+        document.getElementById("productoForm").reset();
+        document.getElementById("margenDeseado").value = "25";
+        document.getElementById("valorTotal").value = "";
+      }
+
+      // Actualizar tabla
+      function actualizarTabla() {
+        const tbody = document.getElementById("tablaProductos");
+        tbody.innerHTML = "";
+
+        const busqueda =
+          document.getElementById("buscarProducto")?.value.toLowerCase() || "";
+        const categoriaFiltro =
+          document.getElementById("filtroCategoria")?.value || "";
+
+        let productosFiltrados = productos.filter((producto) => {
+          const coincideBusqueda = producto.producto
+            .toLowerCase()
+            .includes(busqueda);
+          const coincideCategoria =
+            !categoriaFiltro || producto.categoria === categoriaFiltro;
+          return coincideBusqueda && coincideCategoria;
+        });
+
+        productosFiltrados.forEach((producto) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${producto.item}</td>
+                    <td>${producto.producto}</td>
+                    <td>${producto.cantidad}</td>
+                    <td>${producto.presentacion}</td>
+                    <td>${producto.categoria.toUpperCase()}</td>
+                    <td>${formatCurrency(producto.valorCosto)}</td>
+                    <td>${producto.margen.toFixed(1)}%</td>
+                    <td class="price-new">${formatCurrency(
+                      producto.valorTotal
+                    )}</td>
+                    <td class="price-new">${formatCurrency(
+                      producto.valorTotal * producto.cantidad
+                    )}</td>
+                    <td>
+                        <button class="btn btn-small btn-danger" onclick="eliminarProducto(${
+                          producto.id
+                        })">🗑️</button>
+                    </td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function aplicarEstilosPersonalizados(celda, tipo) {
+        const headerBgColor =
+          document.getElementById("headerBgColor")?.value || "#4472C4";
+        const headerTextColor =
+          document.getElementById("headerTextColor")?.value || "#FFFFFF";
+        const rowOddColor =
+          document.getElementById("rowOddColor")?.value || "#F8F9FA";
+        const rowEvenColor =
+          document.getElementById("rowEvenColor")?.value || "#FFFFFF";
+        const borderColor =
+          document.getElementById("borderColor")?.value || "#DDDDDD";
+        const totalRowBgColor =
+          document.getElementById("totalRowBgColor")?.value || "#E8F5E8";
+
+        if (tipo === "header") {
+          celda.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FF" + headerBgColor.substring(1) },
+          };
+          celda.font = {
+            bold: true,
+            color: { argb: "FF" + headerTextColor.substring(1) },
+            size: 11,
+            name: "Arial",
+          };
+        }
+        // ... agregar más tipos según necesites
+      }
+
+      // Editar producto
+      function editarProducto(id) {
+        const producto = productos.find((p) => p.id === id);
+        if (!producto) return;
+
+        productoEditando = id;
+
+        document.getElementById("editProducto").value = producto.producto;
+        document.getElementById("editCantidad").value = producto.cantidad;
+        document.getElementById("editPresentacion").value =
+          producto.presentacion;
+        document.getElementById("editCategoria").value = producto.categoria;
+        document.getElementById("editValorCosto").value = producto.valorCosto;
+        document.getElementById("editMargen").value = producto.margen;
+        document.getElementById("editValorTotal").value =
+          producto.valorTotal.toFixed(2);
+
+        document.getElementById("modalEditar").style.display = "block";
+      }
+
+      // Guardar edición
+      function guardarEdicion(e) {
+        e.preventDefault();
+
+        const index = productos.findIndex((p) => p.id === productoEditando);
+        if (index === -1) return;
+
+        const costo = parseFloat(
+          document.getElementById("editValorCosto").value
+        );
+        const margen = parseFloat(document.getElementById("editMargen").value);
+
+        productos[index] = {
+          ...productos[index],
+          producto: document.getElementById("editProducto").value,
+          cantidad: parseInt(document.getElementById("editCantidad").value),
+          presentacion: document.getElementById("editPresentacion").value,
+          categoria: document.getElementById("editCategoria").value,
+          valorCosto: costo,
+          margen: margen,
+          valorTotal: costo * (1 + margen / 100),
+        };
+
+        guardarEnStorage();
+        cerrarModal();
+        mostrarNotificacion("Producto actualizado correctamente", "success");
+        actualizarTabla();
+        actualizarResumen();
+        actualizarEstadisticasStorage();
+      }
+
+      // Calcular valor total en edición
+      function calcularValorTotalEdicion() {
+        const costo =
+          parseFloat(document.getElementById("editValorCosto").value) || 0;
+        const margen =
+          parseFloat(document.getElementById("editMargen").value) || 0;
+        const total = costo * (1 + margen / 100);
+        document.getElementById("editValorTotal").value = total.toFixed(2);
+      }
+
+      // Cerrar modal
+      function cerrarModal() {
+        document.getElementById("modalEditar").style.display = "none";
+        productoEditando = null;
+      }
+
+      // Calculadora de fórmulas
+      function calcularFormula() {
+        const costo =
+          parseFloat(document.getElementById("calcCosto").value) || 0;
+        const margen =
+          parseFloat(document.getElementById("calcMargen").value) || 0;
+        const total = costo * (1 + margen / 100);
+        document.getElementById("calcTotal").value = formatCurrency(total);
+      }
+
+      // Filtrar tabla
+      function filtrarTabla() {
+        actualizarTabla();
+      }
+
+      // Eliminar producto
+      function eliminarProducto(id) {
+        if (confirm("¿Está seguro de eliminar este producto?")) {
+          productos = productos.filter((p) => p.id !== id);
+          guardarEnStorage();
+          mostrarNotificacion("Producto eliminado correctamente", "success");
+          actualizarTabla();
+          actualizarResumen();
+          actualizarEstadisticasStorage();
+        }
+      }
+
+      // Limpiar todos los productos
+      function limpiarTodosLosProductos() {
+        if (confirm("¿Está seguro de eliminar todos los productos?")) {
+          productos = [];
+          productosOriginales = [];
+          contadorItems = 1;
+          guardarEnStorage();
+          mostrarNotificacion("Todos los productos eliminados", "success");
+          actualizarTabla();
+          actualizarResumen();
+          actualizarEstadisticasStorage();
+        }
+      }
+
+      // Actualizar resumen
+      function actualizarResumen() {
+        const totalItems = productos.length;
+        const presupuestoActual = productos.reduce(
+          (sum, p) => sum + p.valorTotal * p.cantidad,
+          0
+        );
+        const costoTotal = productos.reduce(
+          (sum, p) => sum + p.valorCosto * p.cantidad,
+          0
+        );
+        const margenPromedio =
+          costoTotal > 0
+            ? ((presupuestoActual - costoTotal) / costoTotal) * 100
+            : 0;
+
+        document.getElementById("totalItems").textContent = totalItems;
+        document.getElementById("presupuestoActual").textContent =
+          formatCurrency(presupuestoActual);
+        document.getElementById("costoTotal").textContent =
+          formatCurrency(costoTotal);
+        document.getElementById("margenPromedio").textContent =
+          margenPromedio.toFixed(1) + "%";
+      }
+
+      // Mostrar opciones de ajuste
+      function mostrarOpcionesAjuste() {
+        const metodo = document.getElementById("metodoAjuste").value;
+        const margenFijoGroup = document.getElementById("margenFijoGroup");
+        const ajustePorCategoria =
+          document.getElementById("ajustePorCategoria");
+
+        margenFijoGroup.style.display =
+          metodo === "margen_fijo" ? "block" : "none";
+        ajustePorCategoria.style.display =
+          metodo === "por_categoria" ? "block" : "none";
+      }
+
+      // Aplicar ajuste
+      function aplicarAjuste() {
+        const presupuestoObjetivo = parseFloat(
+          document.getElementById("presupuestoObjetivo").value
+        );
+        const metodo = document.getElementById("metodoAjuste").value;
+        const presupuestoActual = productos.reduce(
+          (sum, p) => sum + p.valorTotal * p.cantidad,
+          0
+        );
+
+        if (presupuestoActual === 0) {
+          mostrarNotificacion("No hay productos para ajustar", "error");
+          return;
+        }
+
+        switch (metodo) {
+          case "proporcional":
+            aplicarAjusteProporcional(presupuestoObjetivo, presupuestoActual);
+            break;
+          case "margen_fijo":
+            aplicarMargenFijo();
+            break;
+          case "por_categoria":
+            aplicarAjustePorCategoria();
+            break;
+        }
+
+        guardarEnStorage();
+        actualizarTabla();
+        actualizarResumen();
+      }
+
+      // Ajuste proporcional
+      function aplicarAjusteProporcional(objetivo, actual) {
+        const factor = objetivo / actual;
+
+        productos.forEach((producto) => {
+          const nuevoValorTotal = producto.valorTotal * factor;
+          const nuevoMargen =
+            ((nuevoValorTotal - producto.valorCosto) / producto.valorCosto) *
+            100;
+
+          producto.valorTotal = nuevoValorTotal;
+          producto.margen = nuevoMargen;
+        });
+
+        mostrarNotificacion(
+          `Ajuste proporcional aplicado (factor: ${factor.toFixed(3)})`,
+          "success"
+        );
+      }
+
+      // Margen fijo
+      function aplicarMargenFijo() {
+        const margenFijo = parseFloat(
+          document.getElementById("margenFijo").value
+        );
+
+        productos.forEach((producto) => {
+          producto.margen = margenFijo;
+          producto.valorTotal = producto.valorCosto * (1 + margenFijo / 100);
+        });
+
+        mostrarNotificacion(
+          `Margen fijo del ${margenFijo}% aplicado a todos los productos`,
+          "success"
+        );
+      }
+
+      // Ajuste por categoría
+      function aplicarAjustePorCategoria() {
+        const margenes = {
+          papeleria: parseFloat(
+            document.getElementById("margenPapeleria").value
+          ),
+          alimentos: parseFloat(
+            document.getElementById("margenAlimentos").value
+          ),
+          semillas: parseFloat(document.getElementById("margenSemillas").value),
+          aseo: parseFloat(document.getElementById("margenAseo").value),
+          otros: 20,
+        };
+
+        productos.forEach((producto) => {
+          const margen = margenes[producto.categoria] || margenes.otros;
+          producto.margen = margen;
+          producto.valorTotal = producto.valorCosto * (1 + margen / 100);
+        });
+
+        mostrarNotificacion(
+          "Márgenes por categoría aplicados correctamente",
+          "success"
+        );
+      }
+
+      // Restaurar originales
+      function restaurarOriginales() {
+        if (productosOriginales.length === 0) {
+          mostrarNotificacion(
+            "No hay datos originales para restaurar",
+            "error"
+          );
+          return;
+        }
+
+        productos = productosOriginales.map((p) => ({ ...p }));
+        guardarEnStorage();
+        mostrarNotificacion("Datos originales restaurados", "success");
+        actualizarTabla();
+        actualizarResumen();
+      }
+
+      // Exportar a Excel/CSV
+      function exportarExcel() {
+        if (productos.length === 0) {
+          mostrarNotificacion("No hay productos para exportar", "error");
+          return;
+        }
+
+        const datosExport = productos.map((p) => ({
+          Item: p.item,
+          Producto: p.producto,
+          Cantidad: p.cantidad,
+          Presentación: p.presentacion,
+          Categoría: p.categoria,
+          "Valor Costo": p.valorCosto,
+          "Margen %": p.margen.toFixed(2),
+          "Valor Total": p.valorTotal.toFixed(2),
+          Subtotal: (p.valorTotal * p.cantidad).toFixed(2),
+        }));
+
+        // Agregar fila de totales
+        const totalCosto = productos.reduce(
+          (sum, p) => sum + p.valorCosto * p.cantidad,
+          0
+        );
+        const totalPresupuesto = productos.reduce(
+          (sum, p) => sum + p.valorTotal * p.cantidad,
+          0
+        );
+        const margenPromedio =
+          ((totalPresupuesto - totalCosto) / totalCosto) * 100;
+
+        datosExport.push({
+          Item: "",
+          Producto: "TOTALES",
+          Cantidad: "",
+          Presentación: "",
+          Categoría: "",
+          "Valor Costo": totalCosto.toFixed(2),
+          "Margen %": margenPromedio.toFixed(2),
+          "Valor Total": "",
+          Subtotal: totalPresupuesto.toFixed(2),
+        });
+
+        exportarCSVGenerico(datosExport, "presupuesto_pic_completo.csv");
+      }
+
+      // Función genérica para exportar CSV
+      function exportarCSVGenerico(datos, nombreArchivo) {
+        if (datos.length === 0) return;
+
+        const headers = Object.keys(datos[0]);
+        const csvContent = [
+          headers.join(","),
+          ...datos.map((row) =>
+            headers
+              .map((header) => {
+                const value = row[header];
+                return typeof value === "string" && value.includes(",")
+                  ? `"${value}"`
+                  : value;
+              })
+              .join(",")
+          ),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", nombreArchivo);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        mostrarNotificacion(
+          `Archivo ${nombreArchivo} descargado correctamente`,
+          "success"
+        );
+      }
+
+      // Exportar respaldo completo
+      function exportarRespaldoCompleto() {
+        const respaldo = {
+          productos: productos,
+          productosOriginales: productosOriginales,
+          contadorItems: contadorItems,
+          fechaRespaldo: new Date().toISOString(),
+          version: "1.0",
+        };
+
+        const dataStr = JSON.stringify(respaldo, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `respaldo_pic_${
+          new Date().toISOString().split("T")[0]
+        }.json`;
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        mostrarNotificacion(
+          "Respaldo completo exportado correctamente",
+          "success"
+        );
+      }
+
+      // Importar respaldo
+      function importarRespaldo(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const respaldo = JSON.parse(e.target.result);
+
+            if (respaldo.productos && respaldo.productosOriginales) {
+              productos = respaldo.productos;
+              productosOriginales = respaldo.productosOriginales;
+              contadorItems = respaldo.contadorItems || 1;
+
+              guardarEnStorage();
+              actualizarTabla();
+              actualizarResumen();
+              actualizarEstadisticasStorage();
+
+              mostrarNotificacion(
+                "Respaldo importado correctamente",
+                "success"
+              );
+            } else {
+              mostrarNotificacion("Archivo de respaldo inválido", "error");
+            }
+          } catch (error) {
+            mostrarNotificacion(
+              "Error al importar respaldo: " + error.message,
+              "error"
+            );
+          }
+        };
+        reader.readAsText(file);
+
+        // Limpiar el input
+        event.target.value = "";
+      }
+
+      // Actualizar estadísticas de storage
+      function actualizarEstadisticasStorage() {
+        if (!verificarLocalStorage()) {
+          document.getElementById("estadisticasStorage").innerHTML =
+            "<p>localStorage no disponible - usando almacenamiento en memoria.</p>";
+          return;
+        }
+
+        try {
+          const productos_size = new Blob([JSON.stringify(productos)]).size;
+          const originales_size = new Blob([
+            JSON.stringify(productosOriginales),
+          ]).size;
+          const total_size = productos_size + originales_size;
+
+          const estadisticas = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <strong>Productos Actuales</strong><br>
+                            ${productos.length} items<br>
+                            ${(productos_size / 1024).toFixed(2)} KB
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <strong>Productos Originales</strong><br>
+                            ${productosOriginales.length} items<br>
+                            ${(originales_size / 1024).toFixed(2)} KB
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                            <strong>Total Almacenado</strong><br>
+                            ${(total_size / 1024).toFixed(2)} KB<br>
+                            ${((total_size / 1024 / 1024) * 100).toFixed(
+                              4
+                            )}% del límite típico (5MB)
+                        </div>
+                    </div>
+                `;
+
+          document.getElementById("estadisticasStorage").innerHTML =
+            estadisticas;
+        } catch (error) {
+          document.getElementById("estadisticasStorage").innerHTML =
+            "<p>Error al calcular estadísticas de almacenamiento.</p>";
+        }
+      }
+
+      // Limpiar cache completo
+      function limpiarCacheCompleto() {
+        if (
+          confirm(
+            "¿Está seguro de limpiar todo el cache? Esto eliminará configuraciones pero mantendrá los productos."
+          )
+        ) {
+          if (verificarLocalStorage()) {
+            // Mantener solo los productos
+            const productosBackup = productos;
+            const originalesBackup = productosOriginales;
+            const contadorBackup = contadorItems;
+
+            // Limpiar todo el localStorage relacionado
+            Object.values(STORAGE_KEYS).forEach((key) => {
+              localStorage.removeItem(key);
+            });
+
+            // Restaurar productos
+            productos = productosBackup;
+            productosOriginales = originalesBackup;
+            contadorItems = contadorBackup;
+
+            guardarEnStorage();
+            mostrarNotificacion("Cache limpiado correctamente", "success");
+          } else {
+            mostrarNotificacion("No hay cache para limpiar", "error");
+          }
+        }
+      }
+
+      // Resetear sistema completo
+      function resetearSistema() {
+        if (
+          confirm(
+            "⚠️ ADVERTENCIA: Esto eliminará TODOS los datos de forma permanente. ¿Está completamente seguro?"
+          )
+        ) {
+          if (
+            confirm(
+              "Esta acción NO se puede deshacer. ¿Confirma que desea continuar?"
+            )
+          ) {
+            productos = [];
+            productosOriginales = [];
+            contadorItems = 1;
+
+            if (verificarLocalStorage()) {
+              Object.values(STORAGE_KEYS).forEach((key) => {
+                localStorage.removeItem(key);
+              });
+            }
+
+            actualizarTabla();
+            actualizarResumen();
+            actualizarEstadisticasStorage();
+
+            mostrarNotificacion("Sistema reseteado completamente", "success");
+          }
+        }
+      }
+
+      // Mostrar notificación
+      function mostrarNotificacion(mensaje, tipo = "success") {
+        const notification = document.getElementById("notification");
+        notification.textContent = mensaje;
+        notification.className = `notification ${tipo}`;
+        notification.classList.add("show");
+
+        setTimeout(() => {
+          notification.classList.remove("show");
+        }, 3000);
+      }
+
+      // Formatear moneda
+      function formatCurrency(amount) {
+        return new Intl.NumberFormat("es-CO", {
+          style: "currency",
+          currency: "COP",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(amount);
+      }
+
+      // Auto-guardar cada minuto (backup adicional)
+      setInterval(() => {
+        if (productos.length > 0) {
+          guardarEnStorage();
+        }
+      }, 60000); // 60 segundos
+
+      // Funciones para configuración de Excel
+      function cargarConfiguracionExcel() {
+        if (!verificarLocalStorage()) return {}; // Return empty object if localStorage is not available
+
+        try {
+          const config = localStorage.getItem(STORAGE_KEYS.configExcel);
+          if (config) {
+            const configObj = JSON.parse(config);
+
+            // Cargar valores guardados
+            Object.keys(configObj).forEach((key) => {
+              const elemento = document.getElementById(key);
+              if (elemento) {
+                if (elemento.type === "checkbox") {
+                  elemento.checked = configObj[key];
+                } else {
+                  elemento.value = configObj[key];
+                }
+              }
+            });
+
+            // Explicitly load new styling options in case they weren't in the loop keys for some reason
+            const styleElements = [
+              "headerBgColor",
+              "headerTextColor",
+              "rowOddColor",
+              "rowEvenColor",
+              "borderColor",
+              "borderStyle",
+              "totalRowBgColor",
+            ];
+            styleElements.forEach((id) => {
+              if (configObj[id] !== undefined) {
+                // Check if the key exists in the loaded object
+                const element = document.getElementById(id);
+                if (element) {
+                  element.value = configObj[id];
+                }
+              }
+            });
+
+            return configObj; // Return the loaded config object
+          }
+        } catch (e) {
+          console.log("Error cargando configuración Excel:", e);
+        }
+        return {}; // Return empty object on error or if no config is found
+      }
+
+      function guardarConfiguracion() {
+        if (!verificarLocalStorage()) {
+          mostrarNotificacion(
+            "localStorage no disponible para guardar configuración",
+            "error"
+          );
+          return;
+        }
+
+        const config = {
+          nombreArchivo: document.getElementById("nombreArchivo").value,
+          fechaGeneracion: document.getElementById("fechaGeneracion").value,
+          incluirObjeto: document.getElementById("incluirObjeto").checked,
+          objetoContrato: document.getElementById("objetoContrato").value,
+          incluirEntidad: document.getElementById("incluirEntidad").checked,
+          nombreEntidad: document.getElementById("nombreEntidad").value,
+          incluirCategoria: document.getElementById("incluirCategoria").checked,
+          categoriaGeneral: document.getElementById("categoriaGeneral").value,
+          incluirFecha: document.getElementById("incluirFecha").checked,
+          fechaDocumento: document.getElementById("fechaDocumento").value,
+          incluirResponsable:
+            document.getElementById("incluirResponsable").checked,
+          nombreResponsable: document.getElementById("nombreResponsable").value,
+          incluirFormulas: document.getElementById("incluirFormulas").checked,
+          incluirTotales: document.getElementById("incluirTotales").checked,
+          formatoMoneda: document.getElementById("formatoMoneda").checked,
+          filtrosAutomaticos:
+            document.getElementById("filtrosAutomaticos").checked,
+          ajustarColumnas: document.getElementById("ajustarColumnas").checked,
+          anchoMaximoColumna:
+            document.getElementById("anchoMaximoColumna").value,
+          ajustarAlturaFilas:
+            document.getElementById("ajustarAlturaFilas").checked,
+          centrarEncabezados:
+            document.getElementById("centrarEncabezados").checked,
+          // New table styling options
+          headerBgColor: document.getElementById("headerBgColor").value,
+          headerTextColor: document.getElementById("headerTextColor").value,
+          rowOddColor: document.getElementById("rowOddColor").value,
+          rowEvenColor: document.getElementById("rowEvenColor").value,
+          borderColor: document.getElementById("borderColor").value,
+          borderStyle: document.getElementById("borderStyle").value,
+          totalRowBgColor: document.getElementById("totalRowBgColor").value,
+        };
+
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.configExcel,
+            JSON.stringify(config)
+          );
+          mostrarNotificacion(
+            "Configuración guardada correctamente",
+            "success"
+          );
+        } catch (e) {
+          mostrarNotificacion(
+            "Error al guardar configuración: " + e.message,
+            "error"
+          );
+        }
+      }
+
+      // Actualizar vista previa
+      function actualizarVistaPrevia() {
+        const vistaPrevia = document.getElementById("vistaPrevia");
+        if (!vistaPrevia) {
+          console.error("No se encontró el elemento de vista previa");
+          return;
+        }
+
+        let html = "";
+
+        // Función auxiliar para obtener valores de elementos de forma segura
+        function getElementValue(id, defaultValue = "") {
+          const element = document.getElementById(id);
+          if (!element) return defaultValue;
+          return element.type === "checkbox" ? element.checked : element.value;
+        }
+
+        // Obtener valores de forma segura
+        const incluirObjeto = getElementValue("incluirObjeto", false);
+        const objetoContrato = getElementValue("objetoContrato", "");
+        const incluirEntidad = getElementValue("incluirEntidad", false);
+        const nombreEntidad = getElementValue("nombreEntidad", "");
+        const incluirCategoria = getElementValue("incluirCategoria", false);
+        const categoriaGeneral = getElementValue("categoriaGeneral", "");
+        const incluirFecha = getElementValue("incluirFecha", false);
+        const fechaDocumento = getElementValue("fechaDocumento", "");
+        const incluirResponsable = getElementValue("incluirResponsable", false);
+        const nombreResponsable = getElementValue("nombreResponsable", "");
+        const centrarEncabezados = getElementValue("centrarEncabezados", false);
+
+        // Colores y estilos con valores por defecto
+        const headerBgColor = getElementValue("headerBgColor", "#4CAF50");
+        const headerTextColor = getElementValue("headerTextColor", "#FFFFFF");
+        const rowOddColor = getElementValue("rowOddColor", "#F8F9FA");
+        const rowEvenColor = getElementValue("rowEvenColor", "#FFFFFF");
+        const borderColor = getElementValue("borderColor", "#DDDDDD");
+        const totalRowBgColor = getElementValue("totalRowBgColor", "#E8F5E8");
+        const incluirTotales = getElementValue("incluirTotales", false);
+
+        // Función auxiliar para formatear moneda
+        function formatCurrency(value) {
+          return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          }).format(value);
+        }
+
+        // Generar encabezados
+        if (incluirObjeto && objetoContrato) {
+          html += `<div style="font-weight: bold; font-size: 14px; margin-bottom: 15px; text-transform: uppercase; line-height: 1.4;${
+            centrarEncabezados ? " text-align: center;" : ""
+          }">
+            OBJETO: ${objetoContrato}
+          </div>`;
+        }
+
+        if (incluirEntidad && nombreEntidad) {
+          html += `<div style="font-weight: bold; font-size: 13px; margin-bottom: 10px;${
+            centrarEncabezados ? " text-align: center;" : ""
+          }">
+            ${nombreEntidad}
+          </div>`;
+        }
+
+        if (incluirCategoria && categoriaGeneral) {
+          html += `<div style="font-weight: bold; font-size: 12px; margin-bottom: 15px; background: #f0f0f0; padding: 8px; border-radius: 4px;${
+            centrarEncabezados ? " text-align: center;" : ""
+          }">
+            ${categoriaGeneral}
+          </div>`;
+        }
+
+        if (incluirFecha && fechaDocumento) {
+          const fecha = new Date(fechaDocumento).toLocaleDateString("es-CO");
+          html += `<div style="font-size: 11px; color: #666; margin-bottom: 10px;${
+            centrarEncabezados ? " text-align: center;" : ""
+          }">
+            Fecha: ${fecha}
+          </div>`;
+        }
+
+        if (incluirResponsable && nombreResponsable) {
+          html += `<div style="font-size: 11px; color: #666; margin-bottom: 10px;${
+            centrarEncabezados ? " text-align: center;" : ""
+          }">
+            Responsable: ${nombreResponsable}
+          </div>`;
+        }
+
+        // Configurar estilos de borde
+        const borderStyle = getElementValue("borderStyle", "thin");
+        let cssBorderStyle = "solid";
+        let cssBorderWidth = "1px";
+
+        switch (borderStyle) {
+          case "medium":
+            cssBorderStyle = "solid";
+            cssBorderWidth = "2px";
+            break;
+          case "thick":
+            cssBorderStyle = "solid";
+            cssBorderWidth = "3px";
+            break;
+          default: // 'thin'
+            cssBorderStyle = "solid";
+            cssBorderWidth = "1px";
+        }
+
+        // Tabla con datos
+        html += `<div style="margin-top: 30px; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-radius: 8px; overflow: hidden;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: ${headerBgColor}; color: ${headerTextColor};">
+                <th style="padding: 12px; text-align: center; font-weight: bold; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} 0;">Item</th>
+                <th style="padding: 12px; text-align: center; font-weight: bold; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} 0;">Producto</th>
+                <th style="padding: 12px; text-align: center; font-weight: bold; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} 0;">Cant.</th>
+                <th style="padding: 12px; text-align: center; font-weight: bold; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} 0;">Presentación</th>
+                <th style="padding: 12px; text-align: center; font-weight: bold; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 0 ${cssBorderWidth} 0;">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+        // Usar datos reales o de ejemplo
+        let datosParaMostrar = [];
+        if (productos && productos.length > 0) {
+          datosParaMostrar = productos.slice(0, 3); // Solo primeros 3 productos
+        } else {
+          datosParaMostrar = [
+            {
+              item: 1,
+              producto: "Producto Ejemplo 1",
+              cantidad: 5,
+              presentacion: "Unidad",
+              valorTotal: 1500000
+            },
+            {
+              item: 2,
+              producto: "Producto Ejemplo 2 con texto largo",
+              cantidad: 2,
+              presentacion: "Caja",
+              valorTotal: 500000
+            },
+            {
+              item: 3,
+              producto: "Producto Ejemplo 3",
+              cantidad: 10,
+              presentacion: "Bolsa",
+              valorTotal: 300000
+            }
+          ];
+        }
+
+        // Generar filas de datos
+        datosParaMostrar.forEach((item, index) => {
+          const esImpar = index % 2 === 0;
+          const colorFila = esImpar ? rowOddColor : rowEvenColor;
+
+          html += `<tr style="background-color: ${colorFila};">
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${
+            index === datosParaMostrar.length - 1 ? cssBorderWidth : 0
+          };">${item.item}</td>
+            <td style="padding: 12px; text-align: left; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${
+            index === datosParaMostrar.length - 1 ? cssBorderWidth : 0
+          };">${item.producto}</td>
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${
+            index === datosParaMostrar.length - 1 ? cssBorderWidth : 0
+          };">${item.cantidad}</td>
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${
+            index === datosParaMostrar.length - 1 ? cssBorderWidth : 0
+          };">${item.presentacion}</td>
+            <td style="padding: 12px; text-align: right; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 0 ${cssBorderWidth} ${
+            index === datosParaMostrar.length - 1 ? cssBorderWidth : 0
+          }; font-weight: bold;">${formatCurrency(item.valorTotal)}</td>
+          </tr>`;
+        });
+
+        // Agregar fila de totales si está habilitada
+        if (incluirTotales) {
+          const totalSubtotal = datosParaMostrar.reduce(
+            (sum, item) => sum + item.valorTotal,
+            0
+          );
+          html += `<tr style="background-color: ${totalRowBgColor}; font-weight: bold;">
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${cssBorderWidth};"></td>
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${cssBorderWidth};">TOTALES</td>
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${cssBorderWidth};"></td>
+            <td style="padding: 12px; text-align: center; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 ${cssBorderWidth} ${cssBorderWidth} ${cssBorderWidth};"></td>
+            <td style="padding: 12px; text-align: right; border: ${cssBorderWidth} ${cssBorderStyle} ${borderColor}; border-width: 0 0 ${cssBorderWidth} ${cssBorderWidth}; font-weight: bold;">${formatCurrency(totalSubtotal)}</td>
+          </tr>`;
+        }
+
+        html += `</tbody></table></div>`;
+
+        // Mostrar mensaje si no hay elementos
+        if (html.includes("undefined") || html === "") {
+          html = '<div style="color: #999; font-style: italic; padding: 20px; text-align: center;">No hay elementos seleccionados para mostrar</div>';
+        }
+
+        vistaPrevia.innerHTML = html;
+
+        // Auto-guardar configuración
+        guardarConfiguracion();
+      }
+
+      // Función para generar Excel completo con SheetJS
+      async function generarExcelCompleto() {
+        if (productos.length === 0) {
+          mostrarNotificacion("No hay productos para exportar", "error");
+          return;
+        }
+
+        if (typeof XLSX === "undefined") {
+          mostrarNotificacion(
+            "SheetJS no disponible. Generando CSV...",
+            "warning"
+          );
+          generarCSVPersonalizado();
+          return;
+        }
+
+        // Crear workbook
+        const wbCompleto = XLSX.utils.book_new(); // Use a distinct name
+
+        // Preparar datos
+        const wsData = [];
+        let filaActualCompleto = 0; // Use a distinct name
+        const totalColumnas = 8; // A hasta H
+
+        // Agregar encabezados según configuración con celdas fusionadas
+        if (document.getElementById("incluirObjeto").checked) {
+          wsData.push([document.getElementById("objetoContrato").value]);
+          filaActualCompleto++;
+        }
+
+        // Línea vacía
+        wsData.push([""]);
+        filaActualCompleto++;
+
+        if (document.getElementById("incluirEntidad").checked) {
+          wsData.push([document.getElementById("nombreEntidad").value]);
+          filaActualCompleto++;
+        }
+
+        if (document.getElementById("incluirCategoria").checked) {
+          wsData.push([document.getElementById("categoriaGeneral").value]);
+          filaActualCompleto++;
+        }
+
+        // Línea vacía
+        wsData.push([""]);
+        filaActualCompleto++;
+
+        if (document.getElementById("incluirFecha").checked) {
+          const fecha = new Date(
+            document.getElementById("fechaDocumento").value
+          ).toLocaleDateString("es-CO");
+          wsData.push(["Fecha: " + fecha]);
+          filaActualCompleto++;
+        }
+
+        if (
+          document.getElementById("incluirResponsable").checked &&
+          document.getElementById("nombreResponsable").value
+        ) {
+          wsData.push([
+            "Responsable: " +
+              document.getElementById("nombreResponsable").value,
+          ]);
+          filaActualCompleto++;
+        }
+
+        // Línea vacía antes de la tabla
+        wsData.push([""]);
+        filaActualCompleto++;
+
+        // Encabezados de la tabla
+        const encabezadosCompleto = [
+          "ITEM",
+          "PRODUCTO",
+          "CANT",
+          "PRESENTACION",
+          "Valor costo",
+          "Margen %",
+          "VALOR TOTAL",
+          "SUBTOTAL",
+        ]; // Use a distinct name
+        wsData.push(encabezadosCompleto);
+        const filaEncabezadosCompleto = filaActualCompleto; // Use a distinct name
+        filaActualCompleto++;
+
+        // Datos de productos con fórmulas si está habilitado
+        productos.forEach((producto, index) => {
+          const filaDataCompleto = filaActualCompleto + index; // Use a distinct name
+
+          if (document.getElementById("incluirFormulas").checked) {
+            // Con fórmulas
+            wsData.push([
+              producto.item,
+              producto.producto,
+              producto.cantidad,
+              producto.presentacion,
+              producto.valorCosto,
+              producto.margen / 100, // Como porcentaje
+              { f: `E${filaDataCompleto + 1}*(1+F${filaDataCompleto + 1})` }, // Formula based on 1-indexed row
+              { f: `G${filaDataCompleto + 1}*C${filaDataCompleto + 1}` }, // Formula based on 1-indexed row
+            ]);
+          } else {
+            // Sin fórmulas, valores fijos
+            wsData.push([
+              producto.item,
+              producto.producto,
+              producto.cantidad,
+              producto.presentacion,
+              producto.valorCosto,
+              producto.margen / 100,
+              producto.valorTotal,
+              producto.valorTotal * producto.cantidad,
+            ]);
+          }
+        });
+
+        // Fila de totales si está habilitada
+        if (document.getElementById("incluirTotales").checked) {
+          const filaInicioProductosCompleto = filaEncabezadosCompleto + 1; // Use a distinct name
+          const filaFinProductosCompleto =
+            filaActualCompleto + productos.length - 1; // Use a distinct name
+
+          wsData.push([
+            "",
+            "TOTALES",
+            "",
+            "",
+            {
+              f: `SUM(E${filaInicioProductosCompleto + 1}:E${
+                filaFinProductosCompleto + 1
+              })`,
+            }, // Formula based on 1-indexed row
+            "", // No aplica promedio aquí
+            "",
+            {
+              f: `SUM(H${filaInicioProductosCompleto + 1}:H${
+                filaFinProductosCompleto + 1
+              })`,
+            }, // Formula based on 1-indexed row
+          ]);
+        }
+
+        // Crear hoja de trabajo
+        const wsCompleto = XLSX.utils.aoa_to_sheet(wsData); // Use a distinct name
+
+        // Configurar fusiones de celdas para encabezados
+        if (!wsCompleto["!merges"]) wsCompleto["!merges"] = []; // Use distinct worksheet variable
+
+        let filaFusionCompleto = 0; // Use a distinct name
+
+        // Fusionar celda del objeto
+        if (document.getElementById("incluirObjeto").checked) {
+          wsCompleto["!merges"].push({
+            s: { r: filaFusionCompleto, c: 0 }, // Desde A
+            e: { r: filaFusionCompleto, c: totalColumnas - 1 }, // Hasta H
+          });
+          filaFusionCompleto += 2; // Incluye la línea vacía
+        } else {
+          filaFusionCompleto++; // Solo la línea vacía
+        }
+
+        // Fusionar celda de la entidad
+        if (document.getElementById("incluirEntidad").checked) {
+          wsCompleto["!merges"].push({
+            s: { r: filaFusionCompleto, c: 0 },
+            e: { r: filaFusionCompleto, c: totalColumnas - 1 },
+          });
+          filaFusionCompleto++;
+        }
+
+        // Fusionar celda de la categoría
+        if (document.getElementById("incluirCategoria").checked) {
+          wsCompleto["!merges"].push({
+            s: { r: filaFusionCompleto, c: 0 },
+            e: { r: filaFusionCompleto, c: totalColumnas - 1 },
+          });
+          filaFusionCompleto++;
+        }
+
+        // Apply styles and formatting
+        const rangeCompleto = XLSX.utils.decode_range(wsCompleto["!ref"]); // Use distinct worksheet variable
+
+        // Configure column widths
+        if (document.getElementById("ajustarColumnas").checked) {
+          const anchoMaximo =
+            parseInt(document.getElementById("anchoMaximoColumna").value) || 50;
+          const colWidthsCompleto = []; // Use a distinct name
+
+          for (let i = 0; i < encabezadosCompleto.length; i++) {
+            const headerLength = encabezadosCompleto[i]
+              ? encabezadosCompleto[i].toString().length
+              : 5;
+            let baseWch = 5;
+            if (i === 1) baseWch = 10; // PRODUCTO
+            if (i === 3) baseWch = 8; // PRESENTACION
+            colWidthsCompleto[i] = {
+              wch: Math.min(anchoMaximo, Math.max(headerLength, baseWch)),
+            };
+          }
+
+          for (let R = rangeCompleto.s.r; R <= rangeCompleto.e.r; ++R) {
+            if (R >= filaEncabezadosCompleto) {
+              if (
+                wsData[R][0] &&
+                wsData[R][0].toString().length > colWidthsCompleto[0].wch
+              ) {
+                colWidthsCompleto[0].wch = Math.min(
+                  anchoMaximo,
+                  wsData[R][0].toString().length
+                );
+              }
+              if (
+                wsData[R][1] &&
+                wsData[R][1].toString().length > colWidthsCompleto[1].wch
+              ) {
+                const calculatedWch = Math.ceil(
+                  wsData[R][1].toString().length * 1.2
+                );
+                colWidthsCompleto[1].wch = Math.min(
+                  anchoMaximo,
+                  Math.max(colWidthsCompleto[1].wch, calculatedWch)
+                );
+              }
+              if (
+                wsData[R][3] &&
+                wsData[R][3].toString().length > colWidthsCompleto[3].wch
+              ) {
+                const calculatedWch = Math.ceil(
+                  wsData[R][3].toString().length * 1.2
+                );
+                colWidthsCompleto[3].wch = Math.min(
+                  anchoMaximo,
+                  Math.max(colWidthsCompleto[3].wch, calculatedWch)
+                );
+              }
+            }
+          }
+
+          colWidthsCompleto[2] = { wch: 8 }; // CANT
+          colWidthsCompleto[4] = { wch: 15 }; // Valor costo
+          colWidthsCompleto[5] = { wch: 12 }; // Margen %
+          colWidthsCompleto[6] = { wch: 18 }; // VALOR TOTAL
+          colWidthsCompleto[7] = { wch: 18 }; // SUBTOTAL
+
+          wsCompleto["!cols"] = colWidthsCompleto; // Use distinct worksheet variable
+        }
+
+        // Apply cell formatting
+        for (let R = rangeCompleto.s.r; R <= rangeCompleto.e.r; ++R) {
+          // Use distinct range variable
+          for (let C = rangeCompleto.s.c; C <= rangeCompleto.e.c; ++C) {
+            // Use distinct range variable
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!wsCompleto[cellAddress])
+              wsCompleto[cellAddress] = { t: "s", v: "" }; // Use distinct worksheet variable
+
+            if (!wsCompleto[cellAddress].s) wsCompleto[cellAddress].s = {}; // Use distinct worksheet variable
+
+            // Main headers format
+            if (R < filaEncabezadosCompleto && wsCompleto[cellAddress].v) {
+              // Use distinct variables
+              wsCompleto[cellAddress].s = {
+                // Use distinct worksheet variable
+                font: { bold: true, sz: 12 },
+                alignment: {
+                  horizontal: "center",
+                  vertical: "center",
+                  wrapText: true,
+                },
+                fill: { fgColor: { rgb: "FFFFFF" } },
+                border: {
+                  top: { style: "thin" },
+                  bottom: { style: "thin" },
+                  left: { style: "thin" },
+                  right: { style: "thin" },
+                },
+              };
+            }
+
+            // Table headers format
+            if (R === filaEncabezadosCompleto) {
+              // Use distinct variable
+              wsCompleto[cellAddress].s = {
+                // Use distinct worksheet variable
+                font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+                fill: { fgColor: { rgb: "4472C4" } },
+                alignment: {
+                  horizontal: "center",
+                  vertical: "center",
+                  wrapText: true,
+                },
+                border: {
+                  top: { style: "medium" },
+                  bottom: { style: "medium" },
+                  left: { style: "thin" },
+                  right: { style: "thin" },
+                },
+              };
+            }
+
+            // Product data format
+            if (
+              R > filaEncabezadosCompleto &&
+              R <= filaEncabezadosCompleto + productos.length
+            ) {
+              // Use distinct variable
+              wsCompleto[cellAddress].s = {
+                // Use distinct worksheet variable
+                alignment: {
+                  horizontal: "center",
+                  vertical: "center",
+                  wrapText: true,
+                },
+                border: {
+                  top: { style: "thin" },
+                  bottom: { style: "thin" },
+                  left: { style: "thin" },
+                  right: { style: "thin" },
+                },
+              };
+            }
+
+            // Totals row format
+            if (
+              document.getElementById("incluirTotales").checked &&
+              R === filaEncabezadosCompleto + productos.length + 1
+            ) {
+              // Use distinct variable
+              wsCompleto[cellAddress].s = {
+                // Use distinct worksheet variable
+                font: { bold: true, sz: 11 },
+                fill: { fgColor: { rgb: "F2F2F2" } },
+                alignment: {
+                  horizontal: "center",
+                  vertical: "center",
+                  wrapText: true,
+                },
+                border: {
+                  top: { style: "medium" },
+                  bottom: { style: "medium" },
+                  left: { style: "thin" },
+                  right: { style: "thin" },
+                },
+              };
+            }
+          }
+        }
+
+        // Apply currency format
+        if (document.getElementById("formatoMoneda").checked) {
+          for (let R = rangeCompleto.s.r; R <= rangeCompleto.e.r; ++R) {
+            // Use distinct range variable
+            for (let C = 4; C <= 7; ++C) {
+              // Columns E, F, G, H
+              const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+              if (
+                wsCompleto[cellAddress] &&
+                wsCompleto[cellAddress].v !== "" &&
+                wsCompleto[cellAddress].v != null
+              ) {
+                // Use distinct worksheet variable
+                if (C === 5) {
+                  // Column F (Margen %)
+                  wsCompleto[cellAddress].z = "0.00%";
+                } else if (C === 4 || C === 6 || C === 7) {
+                  // Currency columns
+                  wsCompleto[cellAddress].z = '"$"#,##0.00';
+                }
+              }
+            }
+          }
+        }
+
+        // Configure sheet properties
+        wsCompleto["!pageSetup"] = {
+          // Use distinct worksheet variable
+          orientation: "landscape",
+          scale: 85,
+          fitToWidth: 1,
+          fitToHeight: 0,
+        };
+
+        // Configure margins
+        wsCompleto["!margins"] = {
+          // Use distinct worksheet variable
+          left: 0.7,
+          right: 0.7,
+          top: 0.75,
+          bottom: 0.75,
+          header: 0.3,
+          footer: 0.3,
+        };
+
+        // Auto filters if enabled
+        if (document.getElementById("filtrosAutomaticos").checked) {
+          const inicioTabla = filaEncabezadosCompleto; // Use distinct variable
+          const finTabla = filaEncabezadosCompleto + productos.length; // Use distinct variable
+          wsCompleto["!autofilter"] = {
+            // Use distinct worksheet variable
+            ref: `A${inicioTabla + 1}:H${finTabla + 1}`,
+          };
+        }
+
+        // Configure row heights
+        if (!wsCompleto["!rows"]) wsCompleto["!rows"] = []; // Use distinct worksheet variable
+
+        // Function to calculate needed row height
+        function calcularAlturaFilaCompleto(texto, anchoColumna) {
+          // Use a distinct name
+          if (!texto || typeof texto !== "string") return 30;
+
+          const caracteresPromedioPorLinea = Math.floor(anchoColumna / 7);
+          const lineasNecesarias = Math.ceil(
+            texto.length / caracteresPromedioPorLinea
+          );
+          return Math.max(30, lineasNecesarias * 20);
+        }
+
+        if (document.getElementById("ajustarAlturaFilas").checked) {
+          for (let i = 0; i < filaEncabezadosCompleto; i++) {
+            // Use distinct variable
+            if (wsData[i] && wsData[i][0]) {
+              const contenido = wsData[i][0].toString();
+              if (contenido.trim() === "") {
+                wsCompleto["!rows"][i] = { hpx: 20 }; // Use distinct worksheet variable
+              } else {
+                const alturaCalculada = Math.max(
+                  35,
+                  calcularAlturaFilaCompleto(contenido, 800)
+                ); // Use distinct function
+                wsCompleto["!rows"][i] = { hpx: alturaCalculada }; // Use distinct worksheet variable
+              }
+            }
+          }
+
+          wsCompleto["!rows"][filaEncabezadosCompleto] = { hpx: 40 }; // Use distinct worksheet variable
+
+          productos.forEach((producto, index) => {
+            const filaProducto = filaEncabezadosCompleto + 1 + index; // Use distinct variable
+            const alturaProducto = calcularAlturaFilaCompleto(
+              producto.producto,
+              280
+            ); // Use distinct function
+            const alturaPresentacion = calcularAlturaFilaCompleto(
+              producto.presentacion,
+              120
+            ); // Use distinct function
+            const alturaMaxima = Math.max(
+              30,
+              alturaProducto,
+              alturaPresentacion
+            );
+            wsCompleto["!rows"][filaProducto] = { hpx: alturaMaxima }; // Use distinct worksheet variable
+          });
+
+          if (document.getElementById("incluirTotales").checked) {
+            const filaTotales = filaEncabezadosCompleto + productos.length + 1; // Use distinct variable
+            wsCompleto["!rows"][filaTotales] = { hpx: 35 }; // Use distinct worksheet variable
+          }
+        } else {
+          for (let i = 0; i < filaEncabezadosCompleto; i++) {
+            // Use distinct variable
+            if (wsData[i] && wsData[i][0] && wsData[i][0].trim() !== "") {
+              wsCompleto["!rows"][i] = { hpx: 35 }; // Use distinct worksheet variable
+            } else {
+              wsCompleto["!rows"][i] = { hpx: 20 }; // Use distinct worksheet variable
+            }
+          }
+
+          wsCompleto["!rows"][filaEncabezadosCompleto] = { hpx: 40 }; // Use distinct worksheet variable
+
+          for (let i = 0; i < productos.length; i++) {
+            wsCompleto["!rows"][filaEncabezadosCompleto + 1 + i] = { hpx: 30 }; // Use distinct worksheet variable and starting row
+          }
+
+          if (document.getElementById("incluirTotales").checked) {
+            wsCompleto["!rows"][
+              filaEncabezadosCompleto + productos.length + 1
+            ] = { hpx: 35 }; // Use distinct worksheet variable and starting row
+          }
+        }
+
+        // Add sheet to workbook
+        XLSX.utils.book_append_sheet(wbCompleto, wsCompleto, "Presupuesto PIC"); // Use distinct variables
+
+        // Generate file
+        let nombreArchivoCompleto =
+          document.getElementById("nombreArchivo").value ||
+          "PRESUPUESTO_PIC_COMPLETO";
+        if (document.getElementById("fechaGeneracion").value === "si") {
+          const fecha = new Date().toISOString().split("T")[0];
+          nombreArchivoCompleto += "_" + fecha;
+        }
+        nombreArchivoCompleto += ".xlsx";
+
+        try {
+          XLSX.writeFile(wbCompleto, nombreArchivoCompleto); // Use distinct workbook variable
+          mostrarNotificacion(
+            `✅ Archivo Excel "${nombreArchivoCompleto}" generado correctamente`,
+            "success"
+          );
+        } catch (error) {
+          mostrarNotificacion(
+            "❌ Error al generar Excel completo: " + error.message,
+            "error"
+          );
+          console.error("Error SheetJS Completo:", error);
+        }
+      }
+
+      // Función alternativa para verificar SheetJS y generar diagnóstico
+      function verificarSheetJS() {
+        const diagnostico = document.createElement("div");
+        diagnostico.style.cssText =
+          "position: fixed; top: 20px; left: 20px; background: white; padding: 20px; border: 2px solid #333; z-index: 9999; max-width: 400px;";
+
+        let mensaje = "<h3>🔍 Diagnóstico SheetJS</h3>";
+
+        if (typeof XLSX !== "undefined") {
+          mensaje += "<p>✅ SheetJS cargado correctamente</p>";
+          mensaje += `<p>📋 Versión: ${XLSX.version || "No disponible"}</p>`;
+
+          // Verificar funciones clave
+          const funciones = ["utils", "writeFile", "read", "write"];
+          funciones.forEach((func) => {
+            if (XLSX[func]) {
+              mensaje += `<p>✅ XLSX.${func} disponible</p>`;
+            } else {
+              mensaje += `<p>❌ XLSX.${func} NO disponible</p>`;
+            }
+          });
+
+          // Verificar soporte de estilos
+          if (XLSX.write && XLSX.writeFile) {
+            mensaje += "<p>✅ Soporte de escritura disponible</p>";
+          } else {
+            mensaje += "<p>⚠️ Soporte de escritura limitado</p>";
+          }
+        } else {
+          mensaje += "<p>❌ SheetJS NO está cargado</p>";
+          mensaje +=
+            "<p>💡 Verifique que el script esté incluido en el HTML</p>";
+        }
+
+        mensaje +=
+          '<button onclick="this.parentElement.remove()" style="margin-top: 10px; padding: 5px 10px;">Cerrar</button>';
+        diagnostico.innerHTML = mensaje;
+        document.body.appendChild(diagnostico);
+      }
+
+      // Función NUEVA con ExcelJS - Más potente para estilos
+      async function generarExcelConExcelJS() {
+        if (productos.length === 0) {
+          mostrarNotificacion("No hay productos para exportar", "error");
+          return;
+        }
+
+        // Verificar si ExcelJS está disponible
+        if (typeof ExcelJS === "undefined") {
+          mostrarNotificacion(
+            "ExcelJS no disponible. Usando SheetJS...",
+            "warning"
+          );
+          generarExcelConEstilos();
+          return;
+        }
+
+        try {
+          // Cargar configuración de estilos
+          const config = cargarConfiguracionExcel();
+
+          // Crear workbook con ExcelJS
+          const workbook = new ExcelJS.Workbook();
+          const worksheet = workbook.addWorksheet("Presupuesto PIC");
+
+          let filaActual = 1;
+
+          // ENCABEZADOS PRINCIPALES CON FUSIÓN DE CELDAS
+          if (document.getElementById("incluirObjeto").checked) {
+            const objetoTexto = document.getElementById("objetoContrato").value;
+
+            // Fusionar celdas A1:H1 para el objeto
+            worksheet.mergeCells(`A${filaActual}:H${filaActual}`);
+            const celdaObjeto = worksheet.getCell(`A${filaActual}`);
+            celdaObjeto.value = `OBJETO: ${objetoTexto}`;
+
+            // ESTILOS PARA OBJETO
+            celdaObjeto.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            celdaObjeto.font = {
+              bold: true,
+              size: 12,
+              name: "Arial",
+            };
+            celdaObjeto.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+
+            // Calcular altura basada en contenido
+            const alturaCalculada = Math.max(
+              40,
+              Math.ceil(objetoTexto.length / 100) * 20
+            );
+            worksheet.getRow(filaActual).height = alturaCalculada;
+
+            filaActual++;
+          }
+
+          // Línea vacía
+          worksheet.getRow(filaActual).height = 15;
+          filaActual++;
+
+          // ENTIDAD
+          if (document.getElementById("incluirEntidad").checked) {
+            worksheet.mergeCells(`A${filaActual}:H${filaActual}`);
+            const celdaEntidad = worksheet.getCell(`A${filaActual}`);
+            celdaEntidad.value = document.getElementById("nombreEntidad").value;
+
+            celdaEntidad.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            celdaEntidad.font = {
+              bold: true,
+              size: 11,
+              name: "Arial",
+            };
+            celdaEntidad.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+
+            worksheet.getRow(filaActual).height = 25;
+            filaActual++;
+          }
+
+          // Línea vacía
+          worksheet.getRow(filaActual).height = 15;
+          filaActual++;
+
+          // CATEGORÍA
+          if (document.getElementById("incluirCategoria").checked) {
+            worksheet.mergeCells(`A${filaActual}:H${filaActual}`);
+            const celdaCategoria = worksheet.getCell(`A${filaActual}`);
+            celdaCategoria.value =
+              document.getElementById("categoriaGeneral").value;
+
+            celdaCategoria.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            celdaCategoria.font = {
+              bold: true,
+              size: 11,
+              name: "Arial",
+            };
+            celdaCategoria.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "FFE0E0E0" }, // Gris claro
+            };
+            celdaCategoria.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+
+            worksheet.getRow(filaActual).height = 25;
+            filaActual++;
+          }
+
+          // Línea vacía
+          worksheet.getRow(filaActual).height = 15;
+          filaActual++;
+
+          // FECHA Y RESPONSABLE
+          if (document.getElementById("incluirFecha").checked) {
+            const fecha = new Date(
+              document.getElementById("fechaDocumento").value
+            ).toLocaleDateString("es-CO");
+            worksheet.mergeCells(`A${filaActual}:H${filaActual}`);
+            const celdaFecha = worksheet.getCell(`A${filaActual}`);
+            celdaFecha.value = `Fecha: ${fecha}`;
+
+            celdaFecha.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+            };
+            celdaFecha.font = {
+              size: 10,
+              name: "Arial",
+            };
+
+            worksheet.getRow(filaActual).height = 20;
+            filaActual++;
+          }
+
+          if (
+            document.getElementById("incluirResponsable").checked &&
+            document.getElementById("nombreResponsable").value
+          ) {
+            worksheet.mergeCells(`A${filaActual}:H${filaActual}`);
+            const celdaResponsable = worksheet.getCell(`A${filaActual}`);
+            celdaResponsable.value = `Responsable: ${
+              document.getElementById("nombreResponsable").value
+            }`;
+
+            celdaResponsable.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+            };
+            celdaResponsable.font = {
+              size: 10,
+              name: "Arial",
+            };
+
+            worksheet.getRow(filaActual).height = 20;
+            filaActual++;
+          }
+
+          // Línea vacía antes de tabla
+          worksheet.getRow(filaActual).height = 20;
+          filaActual++;
+
+          // ENCABEZADOS DE TABLA
+          const encabezados = [
+            "ITEM",
+            "PRODUCTO",
+            "CANT",
+            "PRESENTACION",
+            "Valor costo",
+            "Margen %",
+            "VALOR TOTAL",
+            "SUBTOTAL",
+          ];
+          const filaEncabezados = filaActual;
+
+          // Agregar encabezados
+          encabezados.forEach((encabezado, index) => {
+            const celda = worksheet.getCell(filaActual, index + 1);
+            celda.value = encabezado;
+
+            // Estilo para encabezados de tabla
+            celda.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            celda.font = {
+              bold: true,
+              // color: { argb: 'FFFFFFFF' }, // Blanco
+              color: {
+                argb: (
+                  document.getElementById("headerTextColor")?.value || "#FFFFFF"
+                ).replace("#", "FF"),
+              },
+              size: 11,
+              name: "Arial",
+            };
+            celda.fill = {
+              type: "pattern",
+              pattern: "solid",
+              // fgColor: { argb: 'FF4472C4' } // Azul
+              fgColor: {
+                argb: (
+                  document.getElementById("headerBgColor")?.value || "#4CAF50"
+                ).replace("#", "FF"),
+              },
+            };
+
+            // Aplicar bordes segun configuración
+            const borderStyle = config.borderStyle || "thin";
+            const borderColor = {
+              argb: config.borderColor.replace("#", "FF") || "FFDDDDDD",
+            };
+
+            celda.border = {
+              top: { style: borderStyle, color: borderColor },
+              left: { style: borderStyle, color: borderColor },
+              bottom: { style: borderStyle, color: borderColor },
+              right: { style: borderStyle, color: borderColor },
+            };
+          });
+
+          worksheet.getRow(filaActual).height = 35;
+          filaActual++;
+
+          // DATOS DE PRODUCTOS
+          productos.forEach((producto, index) => {
+            const fila = filaActual + index;
+
+            // Datos del producto
+            const datosProducto = [
+              producto.item,
+              producto.producto,
+              producto.cantidad,
+              producto.presentacion,
+              producto.valorCosto,
+              producto.margen / 100, // Como decimal para porcentaje
+              producto.valorTotal,
+              producto.valorTotal * producto.cantidad,
+            ];
+
+            datosProducto.forEach((dato, colIndex) => {
+              const celda = worksheet.getCell(fila, colIndex + 1);
+              celda.value = dato;
+
+              // Aplicar colores alternados a las filas
+              const esFilaImpar = index % 2 === 0;
+              const colorFilaConfig = esFilaImpar
+                ? document.getElementById("rowOddColor")?.value || "#F8F9FA"
+                : document.getElementById("rowEvenColor")?.value || "#FFFFFF";
+
+              const colorBorde = (
+                document.getElementById("borderColor")?.value || "#DDDDDD"
+              ).replace("#", "FF");
+              const estiloBorde =
+                document.getElementById("borderStyle")?.value || "thin";
+
+              // ESTILOS PARA DATOS - TODO CENTRADO
+              celda.alignment = {
+                horizontal: "center",
+                vertical: "middle",
+                wrapText: true,
+              };
+              celda.font = {
+                size: 10,
+                name: "Arial",
+              };
+
+              celda.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: colorFilaConfig.replace("#", "FF") },
+              };
+              celda.border = {
+                top: { style: estiloBorde, color: { argb: colorBorde } },
+                left: { style: estiloBorde, color: { argb: colorBorde } },
+                bottom: { style: estiloBorde, color: { argb: colorBorde } },
+                right: { style: estiloBorde, color: { argb: colorBorde } },
+              };
+
+              // Formato de moneda y porcentajes
+              if (document.getElementById("formatoMoneda").checked) {
+                if (colIndex === 4 || colIndex === 6 || colIndex === 7) {
+                  // Columnas de moneda
+                  celda.numFmt = '"$"#,##0.00';
+                } else if (colIndex === 5) {
+                  // Margen %
+                  celda.numFmt = "0.00%";
+                }
+              }
+            });
+
+            // Calcular altura de fila basada en contenido
+            const alturaProducto =
+              Math.ceil(producto.producto.length / 45) * 15;
+            const alturaPresentacion =
+              Math.ceil(producto.presentacion.length / 20) * 15;
+            const alturaFinal = Math.max(
+              25,
+              alturaProducto,
+              alturaPresentacion
+            );
+
+            worksheet.getRow(fila).height = alturaFinal;
+          });
+
+          filaActual += productos.length;
+
+          // FILA DE TOTALES
+          if (document.getElementById("incluirTotales").checked) {
+            const totalCosto = productos.reduce(
+              (sum, p) => sum + p.valorCosto * p.cantidad,
+              0
+            );
+            const totalPresupuesto = productos.reduce(
+              (sum, p) => sum + p.valorTotal * p.cantidad,
+              0
+            );
+
+            const datosTotal = [
+              "",
+              "TOTALES",
+              "",
+              "",
+              totalCosto,
+              "",
+              "",
+              totalPresupuesto,
+            ];
+
+            datosTotal.forEach((dato, colIndex) => {
+              const celda = worksheet.getCell(filaActual, colIndex + 1);
+              celda.value = dato;
+
+              // Estilos para totales
+              celda.alignment = {
+                horizontal: "center",
+                vertical: "middle",
+                wrapText: true,
+              };
+              celda.font = {
+                bold: true,
+                size: 11,
+                name: "Arial",
+              };
+
+              // REEMPLAZAR:
+              // celda.fill = {
+              //     type: "pattern",
+              //     pattern: "solid",
+              //     fgColor: { argb: "FFF2F2F2" }, // Gris claro
+              // };
+
+              // POR:
+              const colorTotales = (
+                document.getElementById("totalRowBgColor")?.value || "#E8F5E8"
+              ).replace("#", "FF");
+              celda.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: colorTotales },
+              };
+
+              celda.border = {
+                top: { style: "medium" },
+                left: { style: "thin" },
+                bottom: { style: "medium" },
+                right: { style: "thin" },
+              };
+
+              // Formato de moneda para totales
+              if (
+                document.getElementById("formatoMoneda").checked &&
+                (colIndex === 4 || colIndex === 7)
+              ) {
+                celda.numFmt = '"$"#,##0.00';
+              }
+            });
+
+            worksheet.getRow(filaActual).height = 30;
+          }
+
+          // CONFIGURAR ANCHOS DE COLUMNA
+          worksheet.columns = [
+            { width: 8 }, // A - ITEM
+            { width: 45 }, // B - PRODUCTO
+            { width: 8 }, // C - CANT
+            { width: 20 }, // D - PRESENTACION
+            { width: 15 }, // E - Valor costo
+            { width: 12 }, // F - Margen %
+            { width: 18 }, // G - VALOR TOTAL
+            { width: 18 }, // H - SUBTOTAL
+          ];
+
+          // CONFIGURAR PROPIEDADES DE PÁGINA
+          worksheet.pageSetup = {
+            orientation: "landscape",
+            fitToPage: true,
+            fitToWidth: 1,
+            fitToHeight: 0,
+            margins: {
+              left: 0.7,
+              right: 0.7,
+              top: 0.75,
+              bottom: 0.75,
+              header: 0.3,
+              footer: 0.3,
+            },
+          };
+
+          // GENERAR Y DESCARGAR ARCHIVO
+          let nombreArchivo =
+            document.getElementById("nombreArchivo").value ||
+            "PRESUPUESTO_PIC_EXCELJS";
+          if (document.getElementById("fechaGeneracion").value === "si") {
+            const fecha = new Date().toISOString().split("T")[0];
+            nombreArchivo += "_" + fecha;
+          }
+          nombreArchivo += ".xlsx";
+
+          // Crear buffer y descargar
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          const url = URL.createObjectURL(blob);
+
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = nombreArchivo;
+          link.style.visibility = "hidden";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          URL.revokeObjectURL(url);
+
+          mostrarNotificacion(
+            `🎯 Excel "${nombreArchivo}" generado con ExcelJS - Formato PERFECTO`,
+            "success"
+          );
+        } catch (error) {
+          mostrarNotificacion(
+            "❌ Error con ExcelJS: " + error.message,
+            "error"
+          );
+          console.error("Error ExcelJS:", error);
+
+          // Fallback a SheetJS
+          mostrarNotificacion("Intentando con SheetJS...", "warning");
+          generarExcelConEstilos();
+        }
+      }
+
+      // Función para verificar disponibilidad de librerías
+      function verificarLibrerias() {
+        const diagnostico = document.createElement("div");
+        diagnostico.style.cssText =
+          "position: fixed; top: 20px; left: 20px; background: white; padding: 20px; border: 2px solid #333; z-index: 9999; max-width: 500px; max-height: 80vh; overflow-y: auto;";
+
+        let mensaje = "<h3>🔍 Diagnóstico de Librerías Excel</h3>";
+
+        // Verificar SheetJS
+        if (typeof XLSX !== "undefined") {
+          mensaje +=
+            '<div style="background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 5px;">';
+          mensaje += "<p><strong>✅ SheetJS</strong> cargado correctamente</p>";
+          mensaje += `<p>📋 Versión: ${XLSX.version || "No disponible"}</p>`;
+          mensaje += "</div>";
+        } else {
+          mensaje +=
+            '<div style="background: #ffebee; padding: 10px; margin: 10px 0; border-radius: 5px;">';
+          mensaje += "<p><strong>❌ SheetJS</strong> NO está cargado</p>";
+          mensaje += "</div>";
+        }
+
+        // Verificar ExcelJS
+        if (typeof ExcelJS !== "undefined") {
+          mensaje +=
+            '<div style="background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 5px;">';
+          mensaje += "<p><strong>✅ ExcelJS</strong> cargado correctamente</p>";
+          mensaje +=
+            "<p>🎯 <strong>RECOMENDADO</strong> - Mejor soporte para estilos</p>";
+          mensaje += "</div>";
+        } else {
+          mensaje +=
+            '<div style="background: #fff3e0; padding: 10px; margin: 10px 0; border-radius: 5px;">';
+          mensaje += "<p><strong>⚠️ ExcelJS</strong> NO está cargado</p>";
+          mensaje += "<p>Esta librería ofrece mejor soporte para estilos</p>";
+          mensaje += "</div>";
+        }
+
+        mensaje +=
+          '<div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;">';
+        mensaje += "<h4>💡 Recomendaciones:</h4>";
+        mensaje += "<ul>";
+        mensaje +=
+          "<li><strong>ExcelJS:</strong> Mejor para estilos y formato complejo</li>";
+        mensaje +=
+          "<li><strong>SheetJS:</strong> Más liviano, básico pero funcional</li>";
+        mensaje += "</ul>";
+        mensaje += "</div>";
+
+        mensaje +=
+          '<button onclick="this.parentElement.remove()" style="margin-top: 15px; padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Cerrar</button>';
+        diagnostico.innerHTML = mensaje;
+        document.body.appendChild(diagnostico);
+      }
+
+      // Fallback: Generar CSV personalizado si no hay XLSX
+      function generarCSVPersonalizado() {
+        let csvContent = "";
+
+        // Agregar encabezados según configuración
+        if (document.getElementById("incluirObjeto").checked) {
+          csvContent +=
+            "OBJETO: " +
+            document.getElementById("objetoContrato").value +
+            "\n\n";
+        }
+
+        if (document.getElementById("incluirEntidad").checked) {
+          csvContent += document.getElementById("nombreEntidad").value + "\n";
+        }
+
+        if (document.getElementById("incluirCategoria").checked) {
+          csvContent +=
+            document.getElementById("categoriaGeneral").value + "\n";
+        }
+
+        if (document.getElementById("incluirFecha").checked) {
+          const fecha = new Date(
+            document.getElementById("fechaDocumento").value
+          ).toLocaleDateString("es-CO");
+          csvContent += "Fecha: " + fecha + "\n";
+        }
+
+        if (
+          document.getElementById("incluirResponsable").checked &&
+          document.getElementById("nombreResponsable").value
+        ) {
+          csvContent +=
+            "Responsable: " +
+            document.getElementById("nombreResponsable").value +
+            "\n";
+        }
+
+        csvContent += "\n"; // Línea vacía antes de la tabla
+
+        // Encabezados de tabla
+        csvContent +=
+          "ITEM,PRODUCTO,CANT,PRESENTACION,Valor costo,Margen %,VALOR TOTAL,SUBTOTAL\n";
+
+        // Datos de productos
+        productos.forEach((producto) => {
+          csvContent +=
+            [
+              producto.item,
+              `"${producto.producto}"`,
+              producto.cantidad,
+              `"${producto.presentacion}"`,
+              producto.valorCosto,
+              producto.margen.toFixed(2) + "%",
+              producto.valorTotal.toFixed(2),
+              (producto.valorTotal * producto.cantidad).toFixed(2),
+            ].join(",") + "\n";
+        });
+
+        // Fila de totales si está habilitada
+        if (document.getElementById("incluirTotales").checked) {
+          const totalCosto = productos.reduce(
+            (sum, p) => sum + p.valorCosto * p.cantidad,
+            0
+          );
+          const totalPresupuesto = productos.reduce(
+            (sum, p) => sum + p.valorTotal * p.cantidad,
+            0
+          );
+
+          csvContent +=
+            [
+              "",
+              "TOTALES",
+              "",
+              "",
+              totalCosto.toFixed(2),
+              "",
+              "",
+              totalPresupuesto.toFixed(2),
+            ].join(",") + "\n";
+        }
+
+        // Descargar CSV
+        let nombreArchivo =
+          document.getElementById("nombreArchivo").value || "PRESUPUESTO_PIC";
+        if (document.getElementById("fechaGeneracion").value === "si") {
+          const fecha = new Date().toISOString().split("T")[0];
+          nombreArchivo += "_" + fecha;
+        }
+        nombreArchivo += ".csv";
+
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", nombreArchivo);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        mostrarNotificacion(
+          `Archivo CSV "${nombreArchivo}" generado correctamente`,
+          "success"
+        );
+        mostrarNotificacion(
+          "Para generar Excel real (.xlsx), incluye la librería SheetJS en tu proyecto",
+          "warning"
+        );
+      }
+
+      // Generar solo tabla sin encabezados
+      function generarExcelSoloTabla() {
+        const datosExport = productos.map((p) => ({
+          ITEM: p.item,
+          PRODUCTO: p.producto,
+          CANT: p.cantidad,
+          PRESENTACION: p.presentacion,
+          "Valor costo": p.valorCosto,
+          "Margen %": p.margen.toFixed(2) + "%",
+          "VALOR TOTAL": p.valorTotal.toFixed(2),
+          SUBTOTAL: (p.valorTotal * p.cantidad).toFixed(2),
+        }));
+
+        // Agregar fila de totales
+        if (document.getElementById("incluirTotales").checked) {
+          const totalCosto = productos.reduce(
+            (sum, p) => sum + p.valorCosto * p.cantidad,
+            0
+          );
+          const totalPresupuesto = productos.reduce(
+            (sum, p) => sum + p.valorTotal * p.cantidad,
+            0
+          );
+
+          datosExport.push({
+            ITEM: "",
+            PRODUCTO: "TOTALES",
+            CANT: "",
+            PRESENTACION: "",
+            "Valor costo": totalCosto.toFixed(2),
+            "Margen %": "",
+            "VALOR TOTAL": "",
+            SUBTOTAL: totalPresupuesto.toFixed(2),
+          });
+        }
+
+        let nombreArchivo =
+          document.getElementById("nombreArchivo").value || "TABLA_PRESUPUESTO";
+        if (document.getElementById("fechaGeneracion").value === "si") {
+          const fecha = new Date().toISOString().split("T")[0];
+          nombreArchivo += "_" + fecha;
+        }
+        nombreArchivo += ".csv";
+
+        exportarCSVGenerico(datosExport, nombreArchivo);
+      }
+    </script>
+  </body>
+</html>
